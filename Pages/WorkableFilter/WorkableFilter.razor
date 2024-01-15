@@ -1,0 +1,79 @@
+@page "/WorkableFilter"
+
+@using BlazorDownloadFile
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Controls;
+@using ChargesWFM.UI.Models;
+<style>
+    tbody tr td:last-child 
+    {
+        text-align: left !important;
+    }
+</style>
+<ContentWrapper Header="WorkableFilter" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    <AuthorizeView Policy="WorkableFilterAccess">
+        <Authorized Context="Auth">
+            <PageHeading Title = "Workable Filter"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="api-data-upload-c">
+                    <div class="card">
+                        <div class="col-12 d-flex px-0">
+                            <button type="button" role="button" class="mt-2 btn btn-gradient-blue btn-addon btn-sm"
+                                @onclick="@btnDownload">
+                                <i class="fa fa-file-excel mr-1"></i>Download Excel to upload
+                            </button>
+                        </div>
+                        <div class="col-12 align-items-center px-0">
+                                <label class="me-2 mt-2 mb-0">Excel Path:*</label> 
+                                <div class="file-container mb-2">
+                                <InputFile OnChange="@OnInputFileChange" @onclick="@OnClickInputFile"
+                                    accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                </InputFile>
+                                </div>
+                                <button type="button" disabled="@disableUploadBtn" @onclick="@UploadExcelData"
+                                    class="btn btn-gradient-blue btn-addon btn-sm"><i class="fa fa-upload mr-1"></i>
+                                    UPLOAD
+                                </button>
+                        </div>
+                    </div>
+                </section>
+                <div hidden="@(isHide)">
+                <Grid TItem="WorkableErrorDetails" @bind-SortColumn="sortColumn" Items="@_uploadedData"
+                    AllowFiltering="true" AllowSorting="true" PageSize="10" MaximumHeight="70vh">
+                    <GridColumns>
+                        <GridColumn TItem="WorkableErrorDetails" Field="@nameof(WorkableErrorDetails.Errordetails)"
+                            Title="Error" ValueExpression="@(Item => Item.Errordetails)" AllowFiltering="true"
+                            AllowSorting="true">
+                        </GridColumn>
+
+                        <GridColumn TItem="WorkableErrorDetails" Field="@nameof(WorkableErrorDetails.MeditechID)"
+                            Title="MeditechID" ValueExpression="@(Item => Item.MeditechID)" AllowFiltering="true"
+                            AllowSorting="true">
+                        </GridColumn>
+
+                        <GridColumn TItem="WorkableErrorDetails" Field="@nameof(WorkableErrorDetails.SubClient)"
+                            Title="SubClient" ValueExpression="@(Item => Item.SubClient)" AllowFiltering="true"
+                            AllowSorting="true">
+                        </GridColumn>
+
+                        <GridColumn TItem="WorkableErrorDetails" Field="@nameof(WorkableErrorDetails.BillableGroup)"
+                            Title="BillableGroup" ValueExpression="@(Item => Item.BillableGroup)" AllowFiltering="true"
+                            AllowSorting="true">
+                        </GridColumn>
+
+                        @* <GridColumn TItem="WorkableErrorDetails" Field="@nameof(WorkableErrorDetails.count)"
+                            Title="Row Number"
+                            ValueExpression="@(Item => Item.count)" AllowFiltering="true" AllowSorting="true">
+                            </GridColumn> *@
+                    </GridColumns>
+                </Grid>
+                </div>
+            </ProgressScreen>
+        </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView>
+</ContentWrapper>

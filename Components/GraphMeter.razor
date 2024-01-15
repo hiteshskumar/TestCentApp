@@ -1,0 +1,169 @@
+@using System.Drawing;
+
+@using ChartJs.Blazor.BarChart;
+@using ChartJs.Blazor.Common;
+ 
+@using ChartJs.Blazor.Common.Enums;
+@using ChartJs.Blazor.PieChart;
+@using ChartJs.Blazor.Common.Axes; 
+@using ChartJs.Blazor.Common.Axes.Ticks;
+@using ChartJs.Blazor.LineChart;
+@using ChartJs.Blazor.Common.Time;
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Services;
+@using ChartJs.Blazor.Util;
+@using Microsoft.AspNetCore.Components;
+@using System.Text.RegularExpressions;
+@using Microsoft.AspNetCore.Components.Authorization;
+
+@using System.Collections.Generic;
+@using System.Linq;
+@using System.Threading.Tasks;
+
+ <div style="margin-top: 60px; margin-left: 60px;">
+                   <div class="d-flex justify-content-center">    
+                    <div class="p-2">
+                        <div class="card" style="width: 30rem;">
+                            <div class="card-body">
+                                <Chart Config=_pieConfig></Chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-2">
+                        <div class="card" style="width: 36rem;">
+                            <div class="card-body">
+                                <Chart Config=_barconfig></Chart>
+                            </div>
+                        </div>
+                    </div>
+
+                   </div>           
+</div>
+
+       
+@code
+{ 
+    private PieConfig _pieConfig; 
+    private BarConfig _barconfig;
+    [Parameter]
+    public string ? SchemaName { get; set; }
+    public int EmpID = 0;
+        private int PGroupID = 0;
+        // private int ProjectGroupID { get; set; }
+        private string? ProjectGroupName { get; set; }
+          [Inject]
+        HttpClient Http { get; set; }
+        [Inject]
+        AuthenticationStateProvider AuthProvider { get; set; }
+        [Inject]
+        ILocalStorageService LocalStorageService { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+            var user =   await LocalStorageService.GetAsync<AuthenticatedUser>();
+            EmpID = user.EmployeeId;
+
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            PGroupID = projectGroup.ProjectGroupID;
+            SchemaName = projectGroup.SchemaName; 
+            await Configurepieconfig();
+            await ConfigureBarconfig();
+             this.StateHasChanged();
+           
+          
+             
+    }
+     
+     private AccountSummary[]? _Accountsummary = Array.Empty<AccountSummary>();
+       
+    List<string> Username = new List<string>();  
+    List<int> Accountcounts = new List<int>(); 
+    public async Task ConfigureBarconfig()
+    {
+         
+        var AuthState = (AuthStateProvider)AuthProvider;
+      //  _Accountsummary = await ApiHelper.GetUsingMsgPackAsync<AccountSummary[]>("/GraphReport/GetAllocationsSummary/ProjectGroupID/" + PGroupID+ "/EmployeeID/" +EmpID, Http, AuthState.Token);
+        
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+            foreach (var data in _Accountsummary)  
+            {  
+                Username.Add(data.Username);  
+                Accountcounts.Add(data.Accountcounts);  
+            } 
+        _barconfig=new BarConfig
+        { 
+            Options = new BarOptions
+            {
+                Title = new OptionsTitle
+                {
+                    Display = true,
+                    Text = "Barchart Sample",
+                    Position = Position.Bottom,
+                },
+            },
+        };
+        _barconfig.Data.Labels.Clear();
+         foreach(var party in _Accountsummary) // new[] {"Party1","Party2","Party3","Party4"} )
+        {
+             
+            _barconfig.Data.Labels.Add(party.Username);
+
+
+        }
+        var dataset= new BarDataset<int>(_Accountsummary.OrderBy(item=>item.Username).Select(item=>item.Accountcounts).ToArray()) // (new[] {35,50,15,70})
+            {
+                
+                    Label = "AccountDetails",
+                   // BackgroundColor =ColorUtil.RandomColorString(), //ColorUtil.FromDrawingColor(Color.FromArgb(128, Color.Blue)),
+                   BackgroundColor = _Accountsummary.Select(item => { return ColorUtil.RandomColorString(); }).ToArray(),
+                    BorderColor = ColorUtil.FromDrawingColor(Color.Blue),
+                    BorderWidth = 1,
+            };
+             _barconfig.Data.Datasets.Clear();
+            _barconfig.Data.Datasets.Add(dataset);
+            this.StateHasChanged();
+
+    }
+    public async Task Configurepieconfig()
+    {
+        var AuthState = (AuthStateProvider)AuthProvider;
+        _Accountsummary = await ApiHelper.GetUsingMsgPackAsync<AccountSummary[]>("/GraphReport/GetAccountAllocationsSummary/ProjectGroupID/" + PGroupID+ "/EmployeeID/" +EmpID+ "/SchemaName/" +this.SchemaName, Http, AuthState.Token);
+        
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+        _pieConfig = new PieConfig
+        {
+            Options = new  PieOptions
+            {
+                Responsive = true,     
+                Title = new OptionsTitle
+                {
+                    Display = true,
+                    Text = "Allocation Summary",
+                    Position = Position.Bottom,
+                },
+               
+                 
+                
+                
+                
+            },
+        };
+        foreach(var party in _Accountsummary)//new[] {"Party1","Party2", "Party3"} )
+        {
+            _pieConfig.Data.Labels.Add(party.Username);
+
+
+        }
+        var dataset= new PieDataset<int>(_Accountsummary.OrderBy(item=>item.Username).Select(item=>item.Accountcounts).ToArray()) //(new[] {35,50,15})
+            {
+                @* BackgroundColor=new[]
+                {
+                    ColorUtil.ColorHexString(255,0,0),
+                    ColorUtil.ColorHexString(0,255,0),
+                    ColorUtil.ColorHexString(0,0,255)
+                } *@
+                  BackgroundColor = _Accountsummary.Select(item => { return ColorUtil.RandomColorString(); }).ToArray(),
+            };
+            _pieConfig.Data.Datasets.Add(dataset);
+              this.StateHasChanged();
+    }
+}

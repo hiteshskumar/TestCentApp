@@ -1,0 +1,207 @@
+@using System.Linq.Expressions
+
+@inject IJSRuntime JSRuntime
+
+@typeparam TItem
+
+<div class="d-flex">
+    <div class="w-100">
+        <div class="">
+            <h3 class="dark-text text-left m-0 py-1">Available</h3>
+            <input value="@AvailableFilterText" type="text" placeholder="Search" class="border form-control rounded" @oninput="OnAvailableFilterTextChanged" />
+            <select @ref="availableItemsSelect" name="availableItems" class="border w-100 mt-2" style="display: block; overflow-y: auto; min-height: 250px; outline: none;" @onkeypress="OnAvailableItemKeyPressed" multiple>
+                @foreach(var value in _availableList)
+                {
+                    <option class="" @ondblclick="@(_ => SelectItem(value))">@_valueExpression(value)</option>
+                }
+            </select>
+            <span class="dark-text text-left">@availableItemsCountDisplayText</span>
+        </div>
+    </div>
+    <div class="d-flex align-items-center mx-3">
+        <div>
+            <button type="button" class="btn btn-success w-100 my-1" @onclick="@(_ => SelectItems())">Add</button>
+            <button type="button" class="btn btn-danger w-100 my-1" @onclick="@(_ => UnselectItems())">Remove</button>
+        </div>
+    </div>
+    <div class="w-100">
+        <div class="">
+            <h3 class="dark-text text-left m-0 py-1">Selected</h3>
+            <input value="@SelectedFilterText" type="text" placeholder="Search" class="border form-control rounded" @oninput="OnSelectedFilterTextChanged" />
+            <select @ref="selectedItemsSelect" name="selectedItems" class="border w-100 mt-2" style="display: block; overflow-y: auto; min-height: 250px; outline: none;" @onkeypress="OnSelectedItemKeyPressed" multiple>
+                @foreach(var value in _selectedList)
+                {
+                    <option class="" @ondblclick="@(_ => UnselectItem(value))">@_valueExpression(value)</option>
+                }
+            </select>
+            <span class="dark-text text-left">@selectedItemsCountDisplayText</span>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private string availableItemsCountDisplayText => string.IsNullOrWhiteSpace(AvailableFilterText) ? $"{_availableList?.Count ?? 0} items available" : $"{_availableList?.Count ?? 0} items available (filtered)";
+    private string selectedItemsCountDisplayText => string.IsNullOrWhiteSpace(SelectedFilterText) ? $"{SelectedList?.Count ?? 0} items selected" : $"{SelectedList?.Count ?? 0} items selected (filtered)";
+    private ElementReference availableItemsSelect;
+    private ElementReference selectedItemsSelect;
+    private IEnumerable<TItem> _selectedList = Enumerable.Empty<TItem>();
+    private List<TItem> _availableList = new List<TItem>();
+    private Func<TItem, string> _valueExpression;
+
+    [Parameter]
+    public string AvailableFilterText { get; set; }
+    [Parameter]
+    public string SelectedFilterText { get; set; }
+    [Parameter]
+    public IEnumerable<TItem> Items { get; set; }
+    [Parameter]
+    public List<TItem> SelectedList { get; set; }
+    [Parameter]
+    public EventCallback<string> AvailableFilterTextChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> SelectedFilterTextChanged { get; set; }
+    [Parameter]
+    public EventCallback<List<TItem>> SelectedListChanged { get; set; }
+    [Parameter]
+    public Expression<Func<TItem, string>> ValueExpression { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        _valueExpression = ValueExpression.Compile();
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await GenerateAvailableItems();
+        await GenerateSelectedItems();
+    }
+
+    private Task GenerateAvailableItems()
+    {
+        _availableList.Clear();
+        foreach (var item in Items)
+        {
+            var selected = SelectedList?.Any(selectedItem => selectedItem.Equals(item)) == true;
+            var available = _availableList.Any(availableItem => availableItem.Equals(item));
+            if (!selected && !available)
+            {
+                if (string.IsNullOrEmpty(AvailableFilterText) || _valueExpression(item).Contains(AvailableFilterText, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    _availableList.Add(item);
+                }
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task GenerateSelectedItems()
+    {
+        if (string.IsNullOrEmpty(SelectedFilterText))
+        {
+            _selectedList = SelectedList?.AsEnumerable() ?? Enumerable.Empty<TItem>();
+        }
+        else
+        {
+            _selectedList = SelectedList?.Where(item => _valueExpression(item).Contains(SelectedFilterText, StringComparison.CurrentCultureIgnoreCase))
+                ?? Enumerable.Empty<TItem>();
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task SelectItem(TItem item)
+    {
+        _availableList.Remove(item);
+        SelectedList.Add(item);
+        await SelectedListChanged.InvokeAsync(SelectedList);
+    }
+
+    private async Task SelectItems()
+    {
+        var values = await GetAllSelectedValues(availableItemsSelect);
+        if (!values.Any())
+        {
+            return;
+        }
+        var items = _availableList
+            .Where(item => values.Any(value => _valueExpression(item).Equals(value)))
+            .ToList();
+        await SelectItems(items);
+    }
+
+    private async Task SelectItems(IEnumerable<TItem> items)
+    {
+        foreach (var item in items)
+        {
+            SelectedList.Add(item);
+            _availableList.Remove(item);
+        }
+        await SelectedListChanged.InvokeAsync(SelectedList);
+    }
+
+    private async Task UnselectItem(TItem item)
+    {
+        _availableList.Add(item);
+        SelectedList.Remove(item);
+        await SelectedListChanged.InvokeAsync(SelectedList);
+    }
+
+    private async Task UnselectItems()
+    {
+        var values = await GetAllSelectedValues(selectedItemsSelect);
+        if (!values.Any())
+        {
+            return;
+        }
+        var items = SelectedList
+            .Where(item => values.Any(value => _valueExpression(item).Equals(value)))
+            .ToList();
+        await UnselectItems(items);
+    }
+
+    private async Task UnselectItems(IEnumerable<TItem> items)
+    {
+        foreach (var item in items)
+        {
+            _availableList.Add(item);
+            SelectedList.Remove(item);
+        }
+        await SelectedListChanged.InvokeAsync(SelectedList);
+    }
+
+    private async Task OnAvailableItemKeyPressed(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await SelectItems();
+        }
+    }
+
+    private async Task OnSelectedItemKeyPressed(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await UnselectItems();
+        }
+    }
+
+    private async Task OnAvailableFilterTextChanged(ChangeEventArgs args)
+    {
+        AvailableFilterText = args.Value?.ToString()?.Trim();
+        await AvailableFilterTextChanged.InvokeAsync(AvailableFilterText);
+        await GenerateAvailableItems();
+    }
+
+    private async Task OnSelectedFilterTextChanged(ChangeEventArgs args)
+    {
+        SelectedFilterText = args.Value?.ToString()?.Trim();
+        await SelectedFilterTextChanged.InvokeAsync(SelectedFilterText);
+        await GenerateSelectedItems();
+    }
+
+    private async Task<IEnumerable<string>> GetAllSelectedValues(ElementReference element)
+    {
+        return await JSRuntime.InvokeAsync<IEnumerable<string>>("getSelectedValues", element);
+    }
+}

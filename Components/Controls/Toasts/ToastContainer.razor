@@ -1,0 +1,31 @@
+@if (toasts.Count > 0)
+{
+    <div class="fixed-top" style="z-index: 1056 !important;">
+        <div class="position-absolute top-0 end-0 d-grid ms-auto mt-5 p-3 user-select-none" style="width: 400px;">
+            @foreach (var toast in toasts)
+            {
+                <div class="container bg-color border border-color rounded shadow mb-2" role="alert" style="border-left-width: 3px !important; @GetBorderCss(toast.ToastType)">
+                    <div class="row">
+                        <div class="col-2 align-self-center text-center">
+                            <i class="fa-solid fa-lg @GetToastTypeIcon(toast.ToastType)"></i>
+                        </div>
+                        <div class="col-10 color p-0">
+                            <div class="d-flex">
+                                <div class="col-6 text-truncate mt-3">
+                                    <strong>@toast.Title</strong>
+                                </div>
+                                <div class="col-6 d-flex justify-content-end text-truncate pe-1 pt-1">
+                                    <small class="text-muted align-self-start p-1">@GetTimeDisplayText(toast.CreatedTimeUtc)</small>
+                                    <button type="button" class="btn-close p-2" aria-label="Close" @onclick="@(() => RemoveToast(toast))"></button>
+                                </div>
+                            </div>
+                            <div class="text-truncate text-wrap mb-3">
+                                <span class="me-auto text-muted">@toast.Message</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}

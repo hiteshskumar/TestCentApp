@@ -1,0 +1,209 @@
+is_global = true
+build_property.TargetFramework = net7.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = false
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = browser
+build_property.RootNamespace = ChargesWFM.UI
+build_property.RootNamespace = ChargesWFM.UI
+build_property.ProjectDir = C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI\
+build_property.RazorLangVersion = 7.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI
+build_property._RazorSourceGeneratorDebug = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/ContentWrapper.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDb250ZW50V3JhcHBlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/Controls/AutoComplete.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDb250cm9sc1xBdXRvQ29tcGxldGUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/Controls/AutoCompleteChip.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDb250cm9sc1xBdXRvQ29tcGxldGVDaGlwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/Controls/ListSelection.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDb250cm9sc1xMaXN0U2VsZWN0aW9uLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/Controls/LoadingScreen.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDb250cm9sc1xMb2FkaW5nU2NyZWVuLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/Controls/MultiSelect.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDb250cm9sc1xNdWx0aVNlbGVjdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/Controls/Toasts/ToastContainer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDb250cm9sc1xUb2FzdHNcVG9hc3RDb250YWluZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/DialogNew.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEaWFsb2dOZXcucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GraphMeter.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmFwaE1ldGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/Filters/BooleanFilter.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XEZpbHRlcnNcQm9vbGVhbkZpbHRlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/Filters/DateTimeFilter.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XEZpbHRlcnNcRGF0ZVRpbWVGaWx0ZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/Grid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XEdyaWQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/GridCheckboxColumn.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XEdyaWRDaGVja2JveENvbHVtbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/GridColumn.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XEdyaWRDb2x1bW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/GridDateTimeColumn.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XEdyaWREYXRlVGltZUNvbHVtbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/GridTextboxColumn.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XEdyaWRUZXh0Ym94Q29sdW1uLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/GridComponent/SearchCriteriaFiltersDropDown.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xHcmlkQ29tcG9uZW50XFNlYXJjaENyaXRlcmlhRmlsdGVyc0Ryb3BEb3duLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/LoadingScreen.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMb2FkaW5nU2NyZWVuLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/MessageScreen.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNZXNzYWdlU2NyZWVuLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/Modal/Modal.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNb2RhbFxNb2RhbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/MultiSelectNew.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNdWx0aVNlbGVjdE5ldy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/ProjectGroupSelection.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQcm9qZWN0R3JvdXBTZWxlY3Rpb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/TimeSheetDetails.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xUaW1lU2hlZXREZXRhaWxzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Components/UnauthorizedComponent.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xVbmF1dGhvcml6ZWRDb21wb25lbnQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/Counter.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ291bnRlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/EditProduction.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRWRpdFByb2R1Y3Rpb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/EmployeeCategoryMapping/EmployeeCategoryMapping.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRW1wbG95ZWVDYXRlZ29yeU1hcHBpbmdcRW1wbG95ZWVDYXRlZ29yeU1hcHBpbmcucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/EmployeeTransaction.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRW1wbG95ZWVUcmFuc2FjdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/FetchData.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRmV0Y2hEYXRhLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/GlobalDashboard/GlobalDashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR2xvYmFsRGFzaGJvYXJkXEdsb2JhbERhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/InventoryDashboard/InventoryDashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW52ZW50b3J5RGFzaGJvYXJkXEludmVudG9yeURhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/ManualAssign/ManualAssign.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWFudWFsQXNzaWduXE1hbnVhbEFzc2lnbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/ModifyProduction.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTW9kaWZ5UHJvZHVjdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/ProductionUpload.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdGlvblVwbG9hZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/ProductivityDashboard/ProductivityDashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdGl2aXR5RGFzaGJvYXJkXFByb2R1Y3Rpdml0eURhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/ProductivityReport/ProductivityReport.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdGl2aXR5UmVwb3J0XFByb2R1Y3Rpdml0eVJlcG9ydC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/ProgressScreen.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZ3Jlc3NTY3JlZW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/SearchAndCode/SearchAndCode.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2VhcmNoQW5kQ29kZVxTZWFyY2hBbmRDb2RlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/Upload/Upload.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXBsb2FkXFVwbG9hZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/WorkableFilter/WorkableFilter.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcV29ya2FibGVGaWx0ZXJcV29ya2FibGVGaWx0ZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Pages/WorkAllocation/WorkAllocation.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcV29ya0FsbG9jYXRpb25cV29ya0FsbG9jYXRpb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Shared/PageHeading.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFBhZ2VIZWFkaW5nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Shared/SurveyPrompt.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFN1cnZleVByb21wdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Shared/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-gdjzktzqho
+
+[C:/Users/hitesh.kumar/Source/Repos/ChargesWFM.UI/Shared/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE5hdk1lbnUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-za0baz8e7e

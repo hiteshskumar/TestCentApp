@@ -1,0 +1,99 @@
+<div class="modal @ModalClass" tabindex="-1" style="@ModalDisplay" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-dialog-scrollable @modalSize" style="@Style">
+    <div class="modal-content rounded">
+      <div class="modal-header">
+        <h5 class="modal-title">@Title</h5>
+        @if (DisplayClose)
+        {
+          <button type="button" class="btn-close" aria-label="Close" @onclick="(() => { Close(); CloseClicked.InvokeAsync(null); })"></button>
+        }
+      </div>
+      <div class="modal-body">
+        @if (ModalClass == "show")
+        {
+            @ChildContent
+        }
+      </div>
+      @if (DisplayFooter)
+      {
+        <div class="modal-footer">
+          @if (Footer != null)
+          {
+              @Footer
+          }
+          else
+          {
+              <button type="button" class="btn btn-danger" @onclick="(() => { Close(); CloseClicked.InvokeAsync(null); })">@CloseActionText</button>
+              @if (DisplaySubmitButton)
+              {
+                  @if (DisplaySubmitSpinner)
+                  {
+                      <button type="button" class="btn btn-sm btn-success" @onclick="OnSubmit" disabled>
+                          <div class="spinner-border text-light" role="status"> <span class="sr-only">@SubmitActionText</span></div>
+                          @SubmitActionText
+                      </button>
+                  }
+                  else
+                  {
+                      <button type="button" class="btn btn-sm btn-success" @onclick="OnSubmit">@SubmitActionText</button>
+                  }
+              }
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@code
+{
+    private string ModalDisplay = "none;";
+    private string ModalClass = "";
+    private string modalSize => DisplayExtraLarge ? "modal-xl" : "modal-lg";
+
+    [Parameter]
+    public bool DisplaySubmitSpinner { get; set; }
+    [Parameter]
+    public bool DisplaySubmitButton { get; set; } = true;
+    [Parameter]
+    public bool DisplayExtraLarge { get; set; }
+    [Parameter]
+    public bool DisplayFooter { get; set; } = true;
+    [Parameter]
+    public bool DisplayClose { get; set; } = true;
+    [Parameter]
+    public string Title { get; set; }
+    [Parameter]
+    public string SubmitActionText { get; set; } = "Submit";
+    [Parameter]
+    public string CloseActionText { get; set; } = "Close";
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+    [Parameter]
+    public RenderFragment Footer { get; set; }
+    [Parameter]
+    public EventCallback SubmitClicked { get; set; }
+    [Parameter]
+    public EventCallback CloseClicked { get; set; }
+    [Parameter]
+    public string Style { get; set; }
+
+    public void Open()
+    {
+        ModalDisplay = "display: block; padding-right: 17px;";
+        ModalClass = "show";
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        ModalDisplay = "display: none;";
+        ModalClass = "";
+        StateHasChanged();
+    }
+
+    private Task OnSubmit()
+    {
+        return SubmitClicked.InvokeAsync(null);
+    }
+}

@@ -1,0 +1,27 @@
+@using Types
+
+<div style="position: relative;">
+    <div class="dropdown-container bg-white m-0" style="position: absolute; top: -30px;">
+        <ul class="m-0" style="list-style: none;" autofocus>
+            @{
+                @foreach (var filter in Filters)
+                {
+                    <li class="p-2 pointer" @onclick="@(() => OnSearchCriteriaFilterChanged(filter))">@filter.ToFriendlyString()</li>
+                }
+            }
+        </ul>
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public IEnumerable<SearchCriteriaFilters> Filters { get; set; }
+    [Parameter]
+    public EventCallback<SearchCriteriaFilters> FilterSelected { get; set; }
+
+    private Task OnSearchCriteriaFilterChanged(SearchCriteriaFilters filter)
+    {
+        return FilterSelected.InvokeAsync(filter);
+    }
+}

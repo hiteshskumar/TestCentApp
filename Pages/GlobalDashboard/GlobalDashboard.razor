@@ -1,0 +1,380 @@
+@page "/globaldashboard"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Controls;
+@using ChargesWFM.UI.Services;
+@using ChargesWFM.UI.Components;
+@inherits LayoutComponentBase; 
+
+<style>
+    tbody tr td:last-child {
+        text-align: left !important;
+    }
+</style>
+
+<ContentWrapper Header="Global Dashboard" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    <AuthorizeView Policy="GlobalDashboardAccess">
+        <Authorized Context="Auth">
+            <PageHeading Title="Global Dashboard"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="card">
+                    <div class="row mt-2">
+                        <div class="col-4 pe-0">
+                            <label for="ddlProcessclient">Process Client</label>
+                            <div>
+                                <MultiSelectNew Id="ddlProcessclient" Items="dsProcessclient"
+                                    TextField="((item)=>item.Client)" ValueField="((item)=>item.ProcessID)"
+                                    SelectedValues="selectedProcessclient"
+                                    ValueChanged="((e)=> { selectedProcessclient=e; })" Label="Process Client">
+                                </MultiSelectNew>
+                            </div>
+                        </div>
+                        <div class="col-3 pe-0">
+                            <button type="button" class="btn btn-success btn-sm m-t-20"
+                                @onclick="@GetRecords"><i class="fa fa-long-arrow-right" aria-hidden="true"></i> GetValues</button>
+                        </div>
+                        
+                    </div>
+                </section>
+                <div hidden="@(isHide)"> 
+                    <div class="col-3 pe-0" hidden = "@(IsDownload)">
+                            <button type="button" class="btn btn-success btn-sm m-t-20"
+                                @onclick="@DownLoad"><i class="fa fa-long-arrow-right" aria-hidden="true"></i> Download </button>
+                        </div>
+                <Grid TItem="GetGlobalDashboardResult" @bind-SortColumn="sortColumn" Items="@_GlobalData"
+                    AllowFiltering="true" DisplayRowChildExpression="@(item => item.DisplaySubGrid)"
+                    AllowSorting="true" MinimumHeight="75vh" AllowExport = "false">
+                    <GridColumns>
+                        <GridColumn TItem="GetGlobalDashboardResult" Title="Action" AllowFiltering="false" AllowSorting="false">
+                            <Template Context="account">
+                                <div>
+                                    @if (account.DisplaySubGrid)
+                                    {
+                                        <i class="bi bi-caret-down-fill" role="button"
+                                        @onclick="@(() => DisplaySubGrid(account))"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-caret-right-fill" role="button"
+                                        @onclick="@(() => DisplaySubGrid(account))"></i>
+                                    }
+                                </div>
+                            </Template>
+                        </GridColumn>
+                        <GridColumn TItem="GetGlobalDashboardResult" Title="Project"
+                            Field="@nameof(GetGlobalDashboardResult.projectgroup)" FieldType="@typeof(string)"
+                            ValueExpression="@(Item => Item.projectgroup)" AllowFiltering="true" AllowSorting="true">
+                        </GridColumn>
+                    </GridColumns>
+                    <RowChild Context="CompletedSummary">
+                        <Grid TItem="ParentDashboardResult" Items="@CompletedSummary.ProductionDataCountResult"
+                            AllowFiltering="true" AllowSorting="true" AllowExport="false" MinimumHeight="30vh"
+                            DisplayRowChildExpression="@(item => item.DisplayProductionSubGrid)">                           
+                            <GridColumns>
+                                <GridColumn TItem="ParentDashboardResult" Title="View Employee Details" AllowFiltering="false">
+                            <Template Context="EmployeeResult">
+                                <div class="d-flex justify-content-center">                                 
+                                        <i class="bi bi-eye ARtooltip" role="button" @onclick="@(() => ViewEmployeeDetails(EmployeeResult))">
+                                            <span class="ARtooltiptext ARtooltip-top">View</span>
+                                        </i>                                   
+                                </div>
+                            </Template>
+                        </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" SimpleFilter="false"
+                                    ValueExpression="@(account => account.WorkedBy)" Field="@nameof(ParentDashboardResult.WorkedBy)" FieldType="@typeof(string)"
+                                    Title="Type" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="Total Count"
+                                    ValueExpression="@(Item => Item.TotalCount)"  Field="@nameof(ParentDashboardResult.TotalCount)" AllowFiltering="true"
+                                    AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="6AM-7AM" Field="@nameof(ParentDashboardResult.st0)"
+                                    ValueExpression="@(Item => Item.st0)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="7AM-8AM" Field="@nameof(ParentDashboardResult.st1)"
+                                    ValueExpression="@(Item => Item.st1)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="8AM-9AM" Field="@nameof(ParentDashboardResult.st2)"
+                                    ValueExpression="@(Item => Item.st2)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="9AM-10AM" Field="@nameof(ParentDashboardResult.st3)"
+                                    ValueExpression="@(Item => Item.st3)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="10AM-11AM" Field="@nameof(ParentDashboardResult.st4)"
+                                    ValueExpression="@(Item => Item.st4)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="11AM-12PM" Field="@nameof(ParentDashboardResult.st5)"
+                                    ValueExpression="@(Item => Item.st5)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="12PM-1PM" Field="@nameof(ParentDashboardResult.st6)"
+                                    ValueExpression="@(Item => Item.st6)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="1PM-2PM" Field="@nameof(ParentDashboardResult.st7)"
+                                    ValueExpression="@(Item => Item.st7)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="2PM-3PM" Field="@nameof(ParentDashboardResult.st8)"
+                                    ValueExpression="@(Item => Item.st8)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="3PM-4PM" Field="@nameof(ParentDashboardResult.st9)"
+                                    ValueExpression="@(Item => Item.st9)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="4PM-5PM" Field="@nameof(ParentDashboardResult.st10)"
+                                    ValueExpression="@(Item => Item.st10)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="5PM-6PM" Field="@nameof(ParentDashboardResult.st11)"
+                                    ValueExpression="@(Item => Item.st11)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="6PM-7PM" Field="@nameof(ParentDashboardResult.st12)"
+                                    ValueExpression="@(Item => Item.st12)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="7PM-8PM" Field="@nameof(ParentDashboardResult.st13)"
+                                    ValueExpression="@(Item => Item.st13)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="8PM-9PM" Field="@nameof(ParentDashboardResult.st14)"
+                                    ValueExpression="@(Item => Item.st14)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="9PM-10PM" Field="@nameof(ParentDashboardResult.st15)"
+                                    ValueExpression="@(Item => Item.st15)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="10PM-11PM" Field="@nameof(ParentDashboardResult.st16)"
+                                    ValueExpression="@(Item => Item.st16)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="11PM-12AM" Field="@nameof(ParentDashboardResult.st17)"
+                                    ValueExpression="@(Item => Item.st17)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="12AM-1AM" Field="@nameof(ParentDashboardResult.st18)"
+                                    ValueExpression="@(Item => Item.st18)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="1AM-2AM" Field="@nameof(ParentDashboardResult.st19)"
+                                    ValueExpression="@(Item => Item.st19)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="2AM-3AM" Field="@nameof(ParentDashboardResult.st20)"
+                                    ValueExpression="@(Item => Item.st20)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="3AM-4AM" Field="@nameof(ParentDashboardResult.st21)"
+                                    ValueExpression="@(Item => Item.st21)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="4AM-5AM" Field="@nameof(ParentDashboardResult.st22)"
+                                    ValueExpression="@(Item => Item.st22)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                                <GridColumn TItem="ParentDashboardResult" Title="5AM-6AM" Field="@nameof(ParentDashboardResult.st23)"
+                                    ValueExpression="@(Item => Item.st23)" AllowFiltering="true" AllowSorting="true">
+                                </GridColumn>
+                            </GridColumns>
+                            @* <RowChild Context="ProductionSummary">
+                                 <Grid TItem="EmployeewiseProductionDashboardResult" Items="@ProductionSummary.EmployeewiseProductionDashboardResult"
+                            AllowFiltering="true" AllowSorting="true" AllowExport="false" PageSize="10" MinimumHeight="0vh">
+
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Field="Type" SimpleFilter="false"
+                                    ValueExpression="@(Item => Item.WorkedBy)" FieldType="@typeof(string)"
+                                    Title="Type" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            </Grid>
+                            </RowChild> *@
+                            @* <ChildContent>
+                                 <Grid TItem="UploadJob" Items="@uploadJobDetails" AllowExport="false" DisplayFooter="false">
+                                    <GridColumns>
+                                    <GridColumn TItem="UploadJob" Title="JobName" ValueExpression="@(item => item.JobName)"></GridColumn>
+                                    <GridColumn TItem="UploadJob" Title="StartedOnUtc" ValueExpression="@(item => item.StartedOnUtc)"></GridColumn>
+                                    <GridColumn TItem="UploadJob" Title="CompletedOnUtc" ValueExpression="@(item => item.CompletedOnUtc)"></GridColumn>
+                                </GridColumns>
+                                </Grid>
+                                </ChildContent> *@
+                        </Grid>
+                    </RowChild>                    
+                </Grid>
+                </div>
+            </ProgressScreen>
+            <DialogNew @ref="modal" Title="Employee Details" CloseActionText="Close" DisplaySubmitButton="false" CloseClicked=@OnCloseButtonClicked >
+            <ChildContent>
+                <div hidden="@(isProductionHide)">
+                    <Grid TItem="EmployeewiseProductionDashboardResult" @bind-SortColumn="sortColumn" Items="@EmployeeProductionDetails" AllowFiltering="true" AllowSorting="true" AllowExport="false"
+                        DisplayFooter="false" MinimumHeight="60vh">
+                        <GridColumns>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="Employee Name" Field="@nameof(EmployeewiseProductionDashboardResult.WorkedBy)"
+                                ValueExpression="@(Item => Item.WorkedBy)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="Total Count"  Field="@nameof(EmployeewiseProductionDashboardResult.TotalCount)"
+                                ValueExpression="@(Item => Item.TotalCount)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="6AM-7AM"  Field="@nameof(EmployeewiseProductionDashboardResult.st0)"
+                                ValueExpression="@(Item => Item.st0)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="7AM-8AM" Field="@nameof(EmployeewiseProductionDashboardResult.st1)"
+                                ValueExpression="@(Item => Item.st1)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="8AM-9AM" Field="@nameof(EmployeewiseProductionDashboardResult.st2)"
+                                ValueExpression="@(Item => Item.st2)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="9AM-10AM" Field="@nameof(EmployeewiseProductionDashboardResult.st3)"
+                                ValueExpression="@(Item => Item.st3)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="10AM-11AM" Field="@nameof(EmployeewiseProductionDashboardResult.st4)"
+                                ValueExpression="@(Item => Item.st4)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="11AM-12PM" Field="@nameof(EmployeewiseProductionDashboardResult.st5)"
+                                ValueExpression="@(Item => Item.st5)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="12PM-1PM" Field="@nameof(EmployeewiseProductionDashboardResult.st6)"
+                                ValueExpression="@(Item => Item.st6)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="1PM-2PM" Field="@nameof(EmployeewiseProductionDashboardResult.st7)"
+                                ValueExpression="@(Item => Item.st7)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="2PM-3PM" Field="@nameof(EmployeewiseProductionDashboardResult.st8)"
+                                ValueExpression="@(Item => Item.st8)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="3PM-4PM" Field="@nameof(EmployeewiseProductionDashboardResult.st9)"
+                                ValueExpression="@(Item => Item.st9)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="4PM-5PM" Field="@nameof(EmployeewiseProductionDashboardResult.st10)"
+                                ValueExpression="@(Item => Item.st10)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="5PM-6PM" Field="@nameof(EmployeewiseProductionDashboardResult.st11)"
+                                ValueExpression="@(Item => Item.st11)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="6PM-7PM" Field="@nameof(EmployeewiseProductionDashboardResult.st12)"
+                                ValueExpression="@(Item => Item.st12)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="7PM-8PM" Field="@nameof(EmployeewiseProductionDashboardResult.st13)"
+                                ValueExpression="@(Item => Item.st13)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="8PM-9PM" Field="@nameof(EmployeewiseProductionDashboardResult.st14)"
+                                ValueExpression="@(Item => Item.st14)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="9PM-10PM" Field="@nameof(EmployeewiseProductionDashboardResult.st15)"
+                                ValueExpression="@(Item => Item.st15)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="10PM-11PM" Field="@nameof(EmployeewiseProductionDashboardResult.st16)"
+                                ValueExpression="@(Item => Item.st16)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="11PM-12AM" Field="@nameof(EmployeewiseProductionDashboardResult.st17)"
+                                ValueExpression="@(Item => Item.st17)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="12AM-1AM" Field="@nameof(EmployeewiseProductionDashboardResult.st18)"
+                                ValueExpression="@(Item => Item.st18)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="1AM-2AM" Field="@nameof(EmployeewiseProductionDashboardResult.st19)"
+                                ValueExpression="@(Item => Item.st19)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="2AM-3AM" Field="@nameof(EmployeewiseProductionDashboardResult.st20)"
+                                ValueExpression="@(Item => Item.st20)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="3AM-4AM" Field="@nameof(EmployeewiseProductionDashboardResult.st21)"
+                                ValueExpression="@(Item => Item.st21)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="4AM-5AM" Field="@nameof(EmployeewiseProductionDashboardResult.st22)"
+                                ValueExpression="@(Item => Item.st22)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseProductionDashboardResult" Title="5AM-6AM" Field="@nameof(EmployeewiseProductionDashboardResult.st23)"
+                                ValueExpression="@(Item => Item.st23)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                        </GridColumns>
+                    </Grid>
+                </div>
+                <div hidden="@(isBacklogHide)">
+                    <Grid TItem="EmployeewiseBacklogDashboardResult" @bind-SortColumn="sortColumn" Items="@EmployeeBacklogDetails" AllowFiltering="true" AllowSorting="true" AllowExport="false"
+                        DisplayFooter="false" MinimumHeight="75vh">
+                        <GridColumns>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="Employee Name"  Field="@nameof(EmployeewiseBacklogDashboardResult.WorkedBy)"
+                                ValueExpression="@(Item => Item.WorkedBy)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="Total Count"  Field="@nameof(EmployeewiseBacklogDashboardResult.TotalCount)"
+                                ValueExpression="@(Item => Item.TotalCount)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="6AM-7AM" ValueExpression="@(Item => Item.st0)"  Field="@nameof(EmployeewiseBacklogDashboardResult.st0)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="7AM-8AM" ValueExpression="@(Item => Item.st1)" Field="@nameof(EmployeewiseBacklogDashboardResult.st1)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="8AM-9AM" ValueExpression="@(Item => Item.st2)" Field="@nameof(EmployeewiseBacklogDashboardResult.st2)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="9AM-10AM"  Field="@nameof(EmployeewiseBacklogDashboardResult.st3)"
+                                ValueExpression="@(Item => Item.st3)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="10AM-11AM"  Field="@nameof(EmployeewiseBacklogDashboardResult.st4)"
+                                ValueExpression="@(Item => Item.st4)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="11AM-12PM"  Field="@nameof(EmployeewiseBacklogDashboardResult.st5)"
+                                ValueExpression="@(Item => Item.st5)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="12PM-1PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st6)"
+                                ValueExpression="@(Item => Item.st6)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="1PM-2PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st7)"
+                                ValueExpression="@(Item => Item.st7)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="2PM-3PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st8)"
+                                ValueExpression="@(Item => Item.st8)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="3PM-4PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st9)"
+                                ValueExpression="@(Item => Item.st9)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="4PM-5PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st10)"
+                                ValueExpression="@(Item => Item.st10)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="5PM-6PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st11)"
+                                ValueExpression="@(Item => Item.st11)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="6PM-7PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st12)"
+                                ValueExpression="@(Item => Item.st12)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="7PM-8PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st13)"
+                                ValueExpression="@(Item => Item.st13)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="8PM-9PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st14)"
+                                ValueExpression="@(Item => Item.st14)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="9PM-10PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st15)"
+                                ValueExpression="@(Item => Item.st15)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="10PM-11PM" Field="@nameof(EmployeewiseBacklogDashboardResult.st16)"
+                                ValueExpression="@(Item => Item.st16)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="11PM-12AM" Field="@nameof(EmployeewiseBacklogDashboardResult.st17)"
+                                ValueExpression="@(Item => Item.st17)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="12AM-1AM" Field="@nameof(EmployeewiseBacklogDashboardResult.st18)"
+                                ValueExpression="@(Item => Item.st18)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="1AM-2AM" ValueExpression="@(Item => Item.st19)" Field="@nameof(EmployeewiseBacklogDashboardResult.st19)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="2AM-3AM" ValueExpression="@(Item => Item.st20)" Field="@nameof(EmployeewiseBacklogDashboardResult.st20)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="3AM-4AM" ValueExpression="@(Item => Item.st21)" Field="@nameof(EmployeewiseBacklogDashboardResult.st21)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="4AM-5AM" ValueExpression="@(Item => Item.st22)" Field="@nameof(EmployeewiseBacklogDashboardResult.st22)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeewiseBacklogDashboardResult" Title="5AM-6AM" ValueExpression="@(Item => Item.st23)" Field="@nameof(EmployeewiseBacklogDashboardResult.st23)"
+                                AllowFiltering="true" AllowSorting="true"></GridColumn>
+                        </GridColumns>
+                    </Grid>
+                </div>
+                <div hidden="@(isEfficiencyHide)">
+                    <Grid TItem="EmployeeWiseEfficiencyDashboardResult" @bind-SortColumn="sortColumn" Items="@EmployeeEfficiencyDetails" AllowExport="false"
+                        DisplayFooter="false" AllowFiltering="true" AllowSorting="true" MinimumHeight="75vh"> 
+                        <GridColumns>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="Employee Name" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.WorkedBy)"
+                                ValueExpression="@(Item => Item.WorkedBy)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="AchievedPercentageWithFullTarget"
+                                ValueExpression="@(Item => Item.AchievedPercentageWithFullTarget)" AllowFiltering="true" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.AchievedPercentageWithFullTarget)"
+                                AllowSorting="true">
+                            </GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="AchievedPercentageWithCategoryTarget"
+                                ValueExpression="@(Item => Item.AchievedPercentageWithCategoryTarget)" AllowFiltering="true" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.AchievedPercentageWithCategoryTarget)"
+                                AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="Total Count"  Field="@nameof(EmployeeWiseEfficiencyDashboardResult.TotalCount)"
+                                ValueExpression="@(Item => Item.TotalCount)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="6AM-7AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st0)"
+                                ValueExpression="@(Item => Item.st0)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="7AM-8AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st1)"
+                                ValueExpression="@(Item => Item.st1)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="8AM-9AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st2)"
+                                ValueExpression="@(Item => Item.st2)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="9AM-10AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st3)"
+                                ValueExpression="@(Item => Item.st3)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="10AM-11AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st4)"
+                                ValueExpression="@(Item => Item.st4)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="11AM-12PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st5)"
+                                ValueExpression="@(Item => Item.st5)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="12PM-1PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st6)"
+                                ValueExpression="@(Item => Item.st6)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="1PM-2PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st7)"
+                                ValueExpression="@(Item => Item.st7)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="2PM-3PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st8)"
+                                ValueExpression="@(Item => Item.st8)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="3PM-4PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st9)"
+                                ValueExpression="@(Item => Item.st9)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="4PM-5PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st10)"
+                                ValueExpression="@(Item => Item.st10)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="5PM-6PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st11)"
+                                ValueExpression="@(Item => Item.st11)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="6PM-7PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st12)"
+                                ValueExpression="@(Item => Item.st12)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="7PM-8PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st13)"
+                                ValueExpression="@(Item => Item.st13)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="8PM-9PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st14)"
+                                ValueExpression="@(Item => Item.st14)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="9PM-10PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st15)"
+                                ValueExpression="@(Item => Item.st15)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="10PM-11PM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st16)"
+                                ValueExpression="@(Item => Item.st16)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="11PM-12AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st17)"
+                                ValueExpression="@(Item => Item.st17)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="12AM-1AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st18)"
+                                ValueExpression="@(Item => Item.st18)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="1AM-2AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st19)"
+                                ValueExpression="@(Item => Item.st19)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="2AM-3AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st20)"
+                                ValueExpression="@(Item => Item.st20)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="3AM-4AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st21)"
+                                ValueExpression="@(Item => Item.st21)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="4AM-5AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st22)"
+                                ValueExpression="@(Item => Item.st22)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                            <GridColumn TItem="EmployeeWiseEfficiencyDashboardResult" Title="5AM-6AM" Field="@nameof(EmployeeWiseEfficiencyDashboardResult.st23)"
+                                ValueExpression="@(Item => Item.st23)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                        </GridColumns>
+                    </Grid>
+                </div>
+            </ChildContent>
+        </DialogNew>
+        </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView>
+</ContentWrapper>

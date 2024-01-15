@@ -1,0 +1,132 @@
+@page "/EmployeeCategoryMapping/EmployeeCategoryMapping"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Services;
+@using BlazorDownloadFile;
+@inject ILogger<ProductionUpload> Logger
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@using System;
+@using System.Data;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Reflection;
+@using System.Threading.Tasks;
+<style>
+    tbody tr td:last-child {
+    text-align: left !important;
+}
+</style>
+<ContentWrapper Header="Upload" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    <AuthorizeView Policy="EmployeeCategoryMappingAccess">
+        <Authorized Context="Auth">
+            <PageHeading Title = "Employee Category Mapping"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="card">                    
+                    <div class="export-container">
+                        <button type="button" role="button" class="mt-2 btn btn-gradient-blue btn-addon btn-sm"
+                            @onclick="@btnDownload">
+                            <i class="fa fa-file-excel mr-1"></i>Download Excel to upload
+                        </button>                                    
+                         <LoadingScreen Enabled="@displayFileLoading">
+                            <div class="file-container my-2">
+                                <InputFile OnChange="OnChooseFile" />
+                            </div>
+                            <div>
+                                <span class="text-primary">@fileName</span>
+                            </div>
+                        </LoadingScreen>                                       
+                        <button type="button" disabled="@disableUploadBtn" @onclick="UploadTemplate"
+                            class="btn btn-sm btn-success"><i class="fa fa-upload mr-1"></i>
+                            UPLOAD
+                        </button>                        
+                    </div>
+                </section>
+                <div hidden="@(ShowEmployeeCategoryMappingGrid)">
+                    <Grid TItem="EmployeeCategoryMappings" @bind-SortColumn="sortColumn" Items="@_employeeCategoryMappings" AllowFiltering="true"
+                        AllowSorting="true" PageSize="10" MinimumHeight="0vh">
+                        <GridColumns>
+                            <GridCheckboxColumn TItem="EmployeeCategoryMappings" ValueExpression="@(item => item.IsChecked)" 
+                                CheckedChanged="@OnCheckedChanged" BulkCheckedChanged="@OnBulkCheckedChanged" 
+                                AllowSorting="false" AllowFiltering="false">
+                            </GridCheckboxColumn>
+                            <GridColumn TItem="EmployeeCategoryMappings" Field="@nameof(EmployeeCategoryMappings.ReportingEmployeeLoginName)" Title="ReportingEmployeeLoginName"
+                                ValueExpression="@(Item => Item.ReportingEmployeeLoginName)" AllowFiltering="true" AllowSorting="true">
+                            </GridColumn>
+                            <GridColumn TItem="EmployeeCategoryMappings" Field="@nameof(EmployeeCategoryMappings.LoginTime)" Title="LoginTime"
+                                ValueExpression="@(Item => Item.LoginTime)" AllowFiltering="true" AllowSorting="true">
+                            </GridColumn>
+                            <GridColumn TItem="EmployeeCategoryMappings" Field="@nameof(EmployeeCategoryMappings.LogoutTime)" Title="LogoutTime"
+                                ValueExpression="@(Item => Item.LogoutTime)" AllowFiltering="true" AllowSorting="true">
+                            </GridColumn>
+                            <GridColumn TItem="EmployeeCategoryMappings" Title="EmployeeCategory">
+                                <Template Context="mapping">
+                                    <select value="@mapping.EmployeeCategory" class="form-select autocomplete-input rounded p-2" @onchange="@(args => ChangeEmployeeCategory(mapping.ReportingEmployeeID, Convert.ToInt32(args.Value)))">
+                                        <option value="0">Select field type</option>
+                                        @foreach (var item in _employeeCategory)
+                                        {
+                                            <option Value="@item.ID">@item.Name</option>
+                                        }
+                                    </select>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn TItem="EmployeeCategoryMappings" Title="LoginStatus">
+                                <Template Context="mapping">
+                                    <select value="@mapping.LoginStatus" class="form-select autocomplete-input rounded p-2" @onchange="@(args => ChangeEmployeeLoginStatus(mapping.ReportingEmployeeID, Convert.ToInt32(args.Value)))">
+                                        <option value="0">Select field type</option>
+                                        @foreach (var item in _employeeLoginStatus)
+                                        {
+                                            <option Value="@item.ID">@item.Name</option>
+                                        }
+                                    </select>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn TItem="EmployeeCategoryMappings" Field="@nameof(EmployeeCategoryMappings.ReportingAuthorityName)" Title="ReportingAuthorityName"
+                                ValueExpression="@(Item => Item.ReportingAuthorityName)" AllowFiltering="true" AllowSorting="true">
+                            </GridColumn>
+                        </GridColumns>
+                    </Grid>
+                </div>
+                @if(EmployeeID.Count > 0)
+                {
+                    <div class="" style="text-align:right; width:100%; padding:0; margin-bottom: 10px;">
+                        <input class="btn btn-success btn-sm m-t-10" type="button" value="Completed"
+                            @onclick="UpdateEmployeeCategory">
+                    </div> 
+                }
+                else
+                {
+                    <div class="" style="text-align:right; width:100%; padding:0; margin-bottom: 10px;">
+                        <input class="btn btn-success btn-sm m-t-10" type="button" value="Completed"
+                            @onclick="UpdateEmployeeCategory" disabled>
+                    </div> 
+                }
+                <div>
+                    <LoadingScreen Enabled="@displayFileUploading">
+                        <div hidden="@(ShowGridUploadError)">
+                            <Grid TItem="ErrorDetail" @bind-SortColumn="sortColumn" Items="@_uploadedData" AllowFiltering="true"
+                                AllowSorting="true" PageSize="10" MinimumHeight="0vh">
+                                <GridColumns>
+                                    <GridColumn TItem="ErrorDetail" Field="@nameof(ErrorDetail.Error)" Title="Error"
+                                        ValueExpression="@(Item => Item.Error)" AllowFiltering="true" AllowSorting="true">
+                                    </GridColumn>
+                                    <GridColumn TItem="ErrorDetail" Field="@nameof(ErrorDetail.Description)" Title="Description"
+                                        ValueExpression="@(Item => Item.Description)" AllowFiltering="true" AllowSorting="true">
+                                    </GridColumn>
+                                    <GridColumn TItem="ErrorDetail" Field="@nameof(ErrorDetail.RowNumber)" Title="Row Number"
+                                        ValueExpression="@(Item => Item.RowNumber)" AllowFiltering="true" AllowSorting="true">
+                                    </GridColumn>
+                                </GridColumns>
+                            </Grid>
+                        </div>
+                    </LoadingScreen>
+                </div>
+            </ProgressScreen>
+        </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView>
+</ContentWrapper>
+

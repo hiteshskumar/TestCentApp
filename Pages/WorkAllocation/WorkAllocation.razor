@@ -1,0 +1,80 @@
+@page "/WorkAllocation/WorkAllocation"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Services;
+@using BlazorDownloadFile;
+@inject ILogger<ProductionUpload> Logger
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@using System;
+@using System.Data;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Reflection;
+@using System.Threading.Tasks;
+<style>
+    tbody tr td:last-child {
+    text-align: left !important;
+}
+</style>
+
+<ContentWrapper Header="Employee Work Allocation" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    @* <AuthorizeView Policy="WorkAllocationAccess">
+        <Authorized Context="Auth">*@
+            <PageHeading Title="Employee Work Allocation"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="card">
+                    @if(!isHide)
+                    { 
+                        <div class="export-container mt-2">
+                            <button type="button" role="button" class="btn btn-primary btn-sm" @onclick="@EditAccountDetails">
+                                <i class="fa fa-arrow-down"> </i> Fetch
+                            </button>
+                            <button type="button" role="button" class="btn btn-gradient-blue btn-addon btn-sm m-l-5" @onclick="@btnDownload">
+                                <i class="fa fa-file-excel mr-1"> </i> Download Excel
+                            </button>                               
+                            <button class="btn btn-success btn-sm" style="margin-left: 65%;" @onclick="OpenDialog" > 
+                                <i class="fa fa-upload"> </i> Uploaded Summary
+                            </button>
+                        </div>
+                    }
+                    @if (IsEditable)
+                    {
+                        <ModifyProduction Accounts="@editableAccounts" EditableCodingFields = "@editableFields"
+                            SelectedClientLogin=@selectedClientLogin
+                            SelectedSubClient = "@EditSubClient"
+                            SelectedSoftware =  "@EditSoftware"
+                            SelectedBillableGroup =  "@EditBillableGroup"
+                            IsBillableGroupDisable = "@IsBillableGroupDisable"
+                            IsSubClientDisable = "@IsSubClientDisable"
+                            IsSoftwareDisable = "@IsSoftwareDisable"
+                            IsTask = "@IsTask"
+                            IsSubTask = "@IsSubTask"
+                            ScreenName = "@screenName"
+                            HasSkip = "@HasSkip">
+                        </ModifyProduction>
+                    }
+                </section>
+                <DialogNew  @ref="modal" DisplaySubmitButton="false" DisplayFooter="false" Title="Uploaded Summary" >
+                    <Grid TItem="WorkallocationAccountSummary"  Items="@_uploadsummary" AllowFiltering="false"
+                        AllowSorting="true" DisplayFooter="false" AllowExport="false" MinimumHeight="0vh">
+                        <GridColumns>
+                            <GridColumn TItem="WorkallocationAccountSummary" Field="@nameof(WorkallocationAccountSummary.Assignedaccounts)" Title="Assignedaccounts"
+                                ValueExpression="@(Item => Item.Assignedaccounts)" AllowFiltering="false" AllowSorting="true">
+                            </GridColumn>
+
+                            <GridColumn TItem="WorkallocationAccountSummary" Field="@nameof(WorkallocationAccountSummary.Completed)" Title="Completed"
+                                ValueExpression="@(Item => Item.Completed)" AllowFiltering="false"
+                                AllowSorting="true">
+                            </GridColumn>
+                        </GridColumns>
+                    </Grid>
+                </DialogNew>
+            </ProgressScreen>
+        @* </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView> *@
+</ContentWrapper>

@@ -1,0 +1,277 @@
+@using ChargesWFM.UI.Models;
+@using MatBlazor;
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+@typeparam TItem 
+<style>
+.mat-autocomplete-list-popup {
+    min-width: calc(100% - -200px) !important;
+}
+</style>
+<div @ref="Ref" id="@topid" class="autocomplete-container mt-2"> 
+    <div class="autocomplete-input-container">
+        <input id="@Id" class="autocomplete-input rounded p-2 pr-4" type="text" @bind="StringValue" @oninput="OnValueChanged" @onfocus="OnFocus"/>
+        @if (SelectedValues != null)
+        {
+            <i class="autocomplete-clear-button bi bi-x pointer" @onclick="OnClearClicked"></i>
+        }
+    </div> 
+    @if (Items != null && IsOpened)
+    {
+        <div class="autocomplete dropdown-container bg-white m-0" >
+            <ul class="autocomplete m-0 li-multiselect" style="list-style: none;" autofocus blur="MultiSelect_RemoveListener">                
+            @{
+                var idAll=$"{Id}selectAll";
+                <li id="@idAll" class="autocomplete pointer form-check" style="padding: .5rem !important" @onclick="@(() => CheckboxALLClicked(CheckedAll))">
+                    <input class="autocomplete form-check-input top-0" for="@idAll" type="checkbox" checked=@CheckedAll autocomplete="off"/>
+                    <label class="autocomplete form-check-label font-weight-normal" for="@idAll">Select All</label>
+                </li>
+                var index = 0;
+                @foreach (var item in GetFilteredCollection(StringValue))  
+                {                        
+                    var Text = TextField?.Invoke(item);  
+                    var Value = ValueField?.Invoke(item).ToString();  
+                    bool Checked = false;  
+                    var id = $"ul-li-{Id}-{index}";
+                    if (_SelectedValues!=null && _SelectedValues.Contains(Value))  
+                    {  
+                        Checked = true;  
+                    }  
+                    <li id="@id" class="autocomplete pointer form-check" style="padding: .5rem !important" @onclick="@(() => CheckboxClicked(Value,Checked))">
+                        <input class="autocomplete form-check-input top-0" type="checkbox" for="@id" checked=@Checked />  
+                        <label class="autocomplete form-check-label font-weight-normal" for="@id"> @Text</label>
+                    </li>                        
+                    index++;
+                }
+            }
+            </ul>  
+            @ChildContent  
+        </div>
+    }
+</div>
+@code
+{
+    private bool IsOpened=false;
+    private bool CheckedAll=false;
+    private string topid{get;set;}
+    private string _id{get;set;}
+    [Parameter]
+    public string Id {
+            get{
+                return _id;
+            }
+            set{ 
+                _id=value; 
+                topid=$"flyout_{_id}";
+            }
+    }
+    [Parameter]
+    public string Label {get;set;}
+     
+    [Parameter]  
+    public EventCallback<List<string>> ValueChanged { get; set; }
+    [Parameter] 
+    public IEnumerable<TItem> Items { get; set; }   
+    [Parameter] 
+    public Func<TItem, string> TextField { get; set; }   
+    [Parameter] 
+    public Func<TItem, object> ValueField { get; set; }  
+    [Parameter] 
+    public RenderFragment ChildContent { get; set; }   
+    private List<string> _SelectedValues { get; set; }
+    [Parameter] 
+    public List<string> SelectedValues 
+    { 
+        get
+        {
+            return _SelectedValues;
+        } 
+        set
+        {
+        	if(_SelectedValues!=value)
+            {
+                _SelectedValues=value;
+                OnParaSet(); 
+            }
+        }
+    }  
+    public List<string> PreviousSelectedValues { get; set; }  
+    private string stringValue;
+    public string StringValue
+    {
+        get { return stringValue; }
+        set
+        {
+            stringValue = value;
+            OnTextChanged.InvokeAsync(value);
+        }
+    }
+    [Parameter]
+    public EventCallback<string> OnTextChanged { get; set; } 
+    [Parameter]
+    public ForwardRef RefBack { get; set; }   
+
+    private DotNetObjectReference<MultiSelect<TItem>> dotNetObjectRef;
+        
+    private ElementReference _ref;
+
+    /// <summary>
+    /// Returned ElementRef reference for DOM element.
+    /// </summary>
+    public ElementReference Ref
+    {
+        get => _ref;
+        set
+        {
+            _ref = value;
+            RefBack?.Set(value);
+        }
+    }
+    protected override async Task OnInitializedAsync(){
+         
+        await Task.CompletedTask;
+    }
+    
+    protected override void OnAfterRender(bool firstRender)
+    {
+       if(firstRender)
+       {
+            dotNetObjectRef ??= DotNetObjectReference.Create(this);            
+       }
+    }
+    public void OnValueChanged(ChangeEventArgs ev)
+    {
+        StringValue = (string)ev.Value;
+        StateHasChanged();
+    }
+    protected async Task OnFocus()
+    { 
+        StringValue=String.Empty;
+        PreviousSelectedValues=_SelectedValues;             
+        await JSRuntime.InvokeAsync<object>("MultiSelect_Init", Ref, dotNetObjectRef,topid);
+        IsOpened=true; 
+    }     
+    protected void  OnParaSet()
+    {
+        if(_SelectedValues!=null && _SelectedValues.Any())
+        {
+            stringValue=$"{_SelectedValues.Count()} Items Selected";
+        }
+        else
+        {
+            stringValue=$"0 Items Selected"; 
+        }
+    } 
+    public async void CheckboxALLClicked(bool value)  
+    {  
+        if(_SelectedValues==null)
+        {
+            _SelectedValues=new List<string>();
+        }
+        CheckedAll = !value;
+        var items=GetFilteredCollection(StringValue);
+        var fielValue=items.Select(x=> ComputeFieldValue(x)).ToList();
+        if (!value)  
+        {  
+            var noteexists=fielValue.Where(e=> !_SelectedValues.Contains(e)).Select(x=> x).ToList();
+            if (noteexists.Any())  
+            {  
+                _SelectedValues.AddRange(noteexists);  
+            }  
+        }  
+        else  
+        {  
+           _SelectedValues=_SelectedValues.Where(e=> !fielValue.Contains(e)).Select(x=> x).ToList();  
+        }   
+        await ValueChanged.InvokeAsync(_SelectedValues);
+        StateHasChanged();  
+    }
+    public async void CheckboxClicked(string aSelectedId, bool aChecked)  
+    {  
+        if(_SelectedValues==null)
+        {
+            _SelectedValues=new List<string>();
+        }
+        if (!aChecked)  
+        {  
+            if (!_SelectedValues.Contains(aSelectedId))  
+            {  
+                _SelectedValues.Add(aSelectedId);  
+            }  
+        }  
+        else  
+        {  
+            if (_SelectedValues.Contains(aSelectedId))  
+            {  
+                _SelectedValues.Remove(aSelectedId);  
+            }
+        } 
+        await ValueChanged.InvokeAsync(_SelectedValues);
+        StateHasChanged();  
+    } 
+    private string searchResult=string.Empty; 
+    protected List<TItem> GetFilteredCollection(string searchText)
+    {  
+        var  ListResult = Items.Select(x => new SearchResultList()
+            {
+                StringValue = ComputeStringValue(x),
+                Item = x
+            }).Where ( x => x != null
+                      && (string.IsNullOrEmpty(searchText)
+                          || x.StringValue.ToLowerInvariant().Contains(searchText.ToLowerInvariant())
+                         )
+             ) 
+            .ToList();
+        return ListResult.Select(x=> x.Item).ToList();
+    }
+
+    private string ComputeStringValue(TItem obj)
+    {
+        return TextField?.Invoke(obj) ?? obj?.ToString();
+    }
+    private string ComputeFieldValue(TItem obj)
+    {
+        return ValueField?.Invoke(obj).ToString() ;
+    } 
+    [JSInvokable]
+    public async Task MatDialogClosedHandler()
+    {
+        IsOpened = false;
+        StringValue=(_SelectedValues!=null && _SelectedValues.Any())?  $"{_SelectedValues.Count()} Items Selected" : $"0 Items Selected";             
+        await JSRuntime.InvokeAsync<object>("MultiSelect_RemoveListener", Ref, dotNetObjectRef,topid);
+        this.StateHasChanged();
+    }
+    public async Task onBlur()
+    {
+        IsOpened = false;
+        StringValue=(_SelectedValues!=null && _SelectedValues.Any())?  $"{_SelectedValues.Count()} Items Selected" : $"0 Items Selected";             
+        await JSRuntime.InvokeAsync<object>("MultiSelect_RemoveListener", Ref, dotNetObjectRef,topid);
+        this.StateHasChanged();
+    }
+    [JSInvokable]
+    public async Task MatDialogOpenedHandler()
+    {
+        IsOpened = true;
+        this.StateHasChanged();
+        await Task.CompletedTask;
+    }
+    private async Task OnClearClicked()
+    {
+        StringValue = string.Empty;
+        CheckedAll = false;
+        _SelectedValues = new List<string>();
+        await ValueChanged.InvokeAsync(_SelectedValues);
+        StateHasChanged(); 
+    }
+
+    async void IDisposable.Dispose()
+    { 
+        dotNetObjectRef?.Dispose();
+        await Task.CompletedTask;
+    }  
+    public class SearchResultList
+    {
+        public string StringValue{get; set;}
+        public TItem Item{get; set;}
+    }
+}

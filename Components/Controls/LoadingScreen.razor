@@ -1,0 +1,28 @@
+<div class="@Class" style="@Css">
+    @if (Enabled)
+    {
+        <div class="center-div">
+            <span class="center-text">@Message</span>
+            <div class="loader"></div>
+        </div>
+    }
+    else
+    {
+        @ChildContent
+    }
+</div>
+
+@code
+{
+    [Parameter]
+    public string Message { get; set; }
+    [Parameter]
+    public bool Enabled { get; set; }
+    [Parameter]
+    public string Class { get; set; }
+    [Parameter]
+    public string Css { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+}

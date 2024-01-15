@@ -1,0 +1,19 @@
+@inject ILogger<DateTimeFilter> Logger
+
+<input type="date" class="form-control border rounded p-1 w-100 font-13" @onchange="OnDateSelected" />
+
+@code
+{
+    [Parameter]
+    public EventCallback<DateTime?> DateSelected { get; set; }
+
+    private Task OnDateSelected(ChangeEventArgs args)
+    {
+        var text = args.Value.ToString();
+        if (DateTime.TryParse(text, out DateTime selectedDate))
+        {
+            return DateSelected.InvokeAsync(selectedDate);
+        }
+        return DateSelected.InvokeAsync(null);
+    }
+}

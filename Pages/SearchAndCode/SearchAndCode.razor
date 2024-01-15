@@ -1,0 +1,1061 @@
+@page "/searchandcode"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Controls;
+@using ChargesWFM.UI.Services
+@using System;
+@using System.Collections.Generic;
+@using System.Linq;
+@using System.Threading.Tasks;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using MessagePack;
+@using System.Data;
+@using System.Reflection;
+@using ChargesWFM.UI.Types;
+@using BlazorDownloadFile;
+@inject ILogger<SearchAndCode> Logger
+@inherits LayoutComponentBase
+<style>
+    tbody tr td:last-child {
+    text-align: left !important;
+}
+</style>
+
+<ContentWrapper Header="Search and Code" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    @* <AuthorizeView Policy="WorkAllocationAccess">
+        <Authorized Context="Auth">*@
+            <PageHeading Title="Search and Code"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                @if(!isHide)        
+                { 
+                <div hidden="@(isHide)">
+                                @if (_Accountinfo != null  && AccountProperty.Any() && AccountProperty != null)
+                                {
+                                    <Grid TItem="GetSearchAndCodeResult" @bind-SortColumn="sortColumn" Items="@_Accountinfo" ItemsChanged="@OnItemsChanged" AllowFiltering="true" OnFilter="@OnFilter" SearchCriterias="@searchCriterias" CustomFilter="true"  AllowSorting="true" MinimumHeight="75vh">
+                                        <GridColumns>
+                                            <GridColumn TItem="GetSearchAndCodeResult" Title="Action" AllowFiltering="false" AllowSorting="false">
+                                                <Template Context="Data">
+                                                <div class="d-flex justify-content-center">
+                                                <span> <i class="bi bi-pencil-square" role="button" title="Edit" @onclick="@(() => EditAccountDetails(Data))" style="color: #6ab065; font-size: 16px;"></i></span>
+                                                </div>
+                                                </Template>
+                                            </GridColumn>
+                                             <GridCheckboxColumn TItem="GetSearchAndCodeResult" ValueExpression="@(item => item.IsChecked)" 
+                                                CheckedChanged="@OnCheckedChanged" BulkCheckedChanged="@OnBulkCheckedChanged" 
+                                                ClearSelection="@OnClearSelection"  AllowSorting="false" 
+                                                AllowFiltering="false" AllowClearingSelection="@_Accountinfo.Any(item => item.IsChecked)">
+                                            </GridCheckboxColumn> 
+                                            
+                                            @foreach (var item in AccountProperty)
+                                            {                                                
+                                                if(item.Item1.PropertyType==typeof(DateTime)||item.Item1.PropertyType==typeof(DateTime?))
+                                                {
+                                                    <GridDateTimeColumn @key="item" TItem="GetSearchAndCodeResult" Field="@item.Item2" Title="@item.Item2"
+                                                        ValueExpression="@(_Accountinfo => item.Item1.GetValue(_Accountinfo))"
+                                                         FieldType="@item.Item1.PropertyType"
+                                                        AllowFiltering="true" AllowSorting="true">
+                                                    </GridDateTimeColumn>
+                                                }
+                                                else
+                                                {
+                                                    <GridColumn @key="item" TItem="GetSearchAndCodeResult" Field="@item.Item2" Title="@item.Item2"
+                                                        ValueExpression="@(_Accountinfo => item.Item1.GetValue(_Accountinfo))"
+                                                        FieldType="@item.Item1.PropertyType"
+                                                        AllowFiltering="true" AllowSorting="true">
+                                                    </GridColumn>
+                                                } 
+                                                             
+                                            }
+                                            @if(ProjectGroupID == 7849)
+                                            {
+                                                <GridColumn TItem="GetSearchAndCodeResult" Title="Comments">
+                                                    <Template Context="mapping">
+                                                        <select value="@mapping.BufferColumn43" class="form-select autocomplete-input rounded p-2" @onchange="@(args => OnChangeUserComments(Convert.ToString(args.Value), mapping.UploadID))">
+                                                            <option value="0">Select Comments</option>
+                                                            @foreach (var item in CommentList)
+                                                            {
+                                                                <option Value="@item.MasterValue">@item.MasterValue</option>
+                                                            }
+                                                        </select>
+                                                    </Template>
+                                                </GridColumn>
+                                            }
+                                               @* <GridColumn TItem="GetSearchAndCodeResult" Title="Comments">
+                                                    <Template Context="item">
+                                                        <textarea cols="10" rows="1" value="@item.Comments" onfocus="(this.rows = '5')" onblur="(this.rows = '1')"></textarea>
+                                                    </Template>   
+                                                </GridColumn>     *@
+                                        </GridColumns>
+                                         
+                                    </Grid>
+                                    @* <button type="button" class="btn btn-sm btn-success" @onclick="(e => FetchAccountDetails())"><i
+                                    class="fa fa-check me-2"></i>Fetch</button> *@
+                                    @if(ProjectGroupID == 7849)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-warning" @onclick="(e => OnBatchBulkCompletionClicked())"><i
+                                        class="fa fa-check me-2"></i>Bulk Batch Completion</button><span>&nbsp;</span>
+                                    }
+                                    @if(ProjectGroupID != 7849)
+                                    {
+                                    <button type="button" class="btn btn-sm btn-warning" @onclick="(e => OnBulkCompletionClicked())"><i
+                                        class="fa fa-check me-2"></i>Bulk Completion</button><span>&nbsp;</span>
+                                    }
+                                     <button type="button" class="btn btn-sm btn-success" @onclick="(e => btnDownload())"><i
+                                    class="fa fa-check me-2"></i>Download Excel</button>
+                                }
+                    </div>
+                }  
+                @if (IsEditable)
+                {
+                       <ModifyProduction Accounts="@editableAccounts" EditableCodingFields = "@editableFields"
+                            SelectedClientLogin=@selectedClientLogin
+                            SelectedSubClient = "@EditSubClient"
+                            SelectedSoftware =  "@EditSoftware"
+                            SelectedBillableGroup =  "@EditBillableGroup"
+                            IsBillableGroupDisable = "@IsBillableGroupDisable"
+                            IsSubClientDisable = "@IsSubClientDisable"
+                            IsSoftwareDisable = "@IsSoftwareDisable"
+                            IsTask = "@IsTask"
+                            IsSubTask = "@IsSubTask" HasSkip = "@HasSkip"
+                            ScreenName = "@screenName"></ModifyProduction>
+                }
+                 <MatDialog @bind-IsOpen="@ConfirmationDialog">
+                    <MatDialogTitle>Bulk Completion</MatDialogTitle>
+                    <MatDialogContent>
+                        <div class="row">
+                             <div class="col-md-5 pe-0">
+                                <label class="form-label mb-0">FYI Notes</label>
+                                <textarea rows="3" class="form-control rounded" @bind="@Comments" placeholder="FYI Notes"></textarea>
+                            </div>
+                            <div class="col-md-7 pe-0">
+                              <label class="form-label mb-0">Client Disposition</label>
+                                <select class="form-control" style="min-width: 100px !important;" value="@DispositionCode" @onchange="OnClientDispositionChanged">
+                                    @foreach (var item in ClientDispositionList)
+                                    {
+                                        <option Value="@item.MasterValue"> @item.MasterValue </option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </MatDialogContent>
+                    <MatDialogActions>
+                        <div class="upload-button-group">
+                            <button type="button" class="btn btn-sm btn-success" @onclick="(e => OnCompletedClick())"><i
+                                    class="fa fa-check me-2"></i>Completed</button>
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="(e => OnPendedClick())"><i
+                                    class="fa fa-times me-2"></i>Pended</button>
+                             <button type="button" class="btn btn-sm btn-warning" @onclick="(e => OnCancelClick())"><i
+                                    class="fa fa-times me-2"></i>Cancel</button>
+                        </div>
+                    </MatDialogActions>
+                </MatDialog>   
+                <MatDialog @bind-IsOpen="@BatchConfirmDialog">
+                    <MatDialogTitle>Batch Bulk Completion</MatDialogTitle>
+                    <MatDialogContent>
+                        <div class="row">
+                             <div class="col-md-5 pe-0">
+                                <label class="form-label mb-0">Comments</label>
+                                <textarea rows="7" style="width: 240px;" readonly="true" class="form-control rounded" @bind="@CommonComments" placeholder="Comments"></textarea>
+                            </div>
+                        </div>
+                    </MatDialogContent>
+                    <MatDialogActions>
+                        <div class="upload-button-group">
+                            <button type="button" class="btn btn-sm btn-success" @onclick="(e => OnBatchAccountBulkCompletion())"><i
+                                    class="fa fa-check me-2"></i>Submit</button>
+                             <button type="button" class="btn btn-sm btn-warning" @onclick="(e => OnCancelClick())"><i
+                                    class="fa fa-times me-2"></i>Cancel</button>
+                        </div>
+                    </MatDialogActions>
+                </MatDialog>                   
+            </ProgressScreen>
+        @* </Authorized>
+            <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+     </AuthorizeView> *@
+</ContentWrapper>
+
+@code {
+    
+    [Inject]
+    HttpClient Http { get; set; }
+    
+    [Inject]
+    AuthenticationStateProvider AuthProvider { get; set; }
+    
+    [Inject]
+    ILocalStorageService LocalStorageService { get; set; }
+    
+    [Inject]
+    IJSRuntime JSRuntime { get; set; }
+    
+    [Inject]
+    IToasterService? ToasterService { get; set; }
+    
+    [Inject]
+    IMatToaster Toaster { get; set; }
+
+    [Inject]
+    IBlazorDownloadFileService BlazorDownloadFileService { get; set; }
+    
+    public int ProjectGroupID { get; set; }
+    public int EmployeeID { get; set; }
+    public string? ProjectGroupName { get; set; }
+    public string? SchemaName = string.Empty;
+    private string? progressText { get; set; }
+    private bool displayLoading;
+    private string? selectedClientLogin { get; set; }
+    public string? screenName { get; set; }
+    public bool HasSkip { get; set; } = false;
+    public bool displayProgress;
+    private SearchAndCodeAccountDetails[]? searchAndCodeAccountDetails;
+    private SearchAndCodeAccountDetails[]? searchAndCodeBatchAccountDetails;
+    private IEnumerable<GetFieldResult>? UnqFieldResult { get; set; } = Enumerable.Empty<GetFieldResult>();
+    private List<Tuple<PropertyInfo, string>> AccountProperty = new List<Tuple<PropertyInfo, string>>();
+    public IEnumerable<GetSearchAndCodeResult> _Accountinfo { get; set; } = Enumerable.Empty<GetSearchAndCodeResult>();
+    private List<Tuple<PropertyInfo, string>> BatchAccountProperty = new List<Tuple<PropertyInfo, string>>();
+    public IEnumerable<GetSearchAndCodeResult> _BatchAccountinfo { get; set; } = Enumerable.Empty<GetSearchAndCodeResult>();
+    public IEnumerable<MasterTableData>  ClientDispositionList { get; set; } = Enumerable.Empty<MasterTableData>();
+    public List<long> UploadIds = new List<long>();
+    private bool isHide = true;
+    private int pageSize = 50;
+    private Tuple<string, GridSortOrder>? sortColumn;
+    public EventCallback<IEnumerable<GetSearchAndCodeResult>> ItemsChanged { get; set; }
+    public EventCallback<IEnumerable<GetSearchAndCodeResult>> BulkCheckedChanged { get; set; }
+    public bool IsEditable;    
+
+    public bool IsBillableGroupDisable;
+    public bool IsSubClientDisable;
+    public bool IsSoftwareDisable;
+    public bool IsTask;
+    public bool IsSubTask;
+    private List<EmployeeAccountDetails> editableAccounts = new List<EmployeeAccountDetails>();
+    public List<string> downloadExcelHeaders = new List<string>();
+    public List<string> downloadExcelHeadersDisplay = new List<string>();
+    
+    private SearchCriteriaFilters searchCriteriaFilter = SearchCriteriaFilters.Contains;
+    private List<SearchCriteria> searchCriterias = new List<SearchCriteria>();
+    
+    private List<EditableFields> editableFields = new List<EditableFields>();
+    
+    private SearchCriteriaFilters _SearchCriteriaFilter { get; set; } = SearchCriteriaFilters.Equal;
+
+    public string? Comments { get; set; }
+    public string? CommonComments { get; set; } = "No Error";
+    public IEnumerable<MasterTableData>  CommentList { get; set; } = Enumerable.Empty<MasterTableData>();
+   
+    public SearchCriteriaFilters SearchCriteriaFilter
+    {
+        get
+        {
+            return searchCriteriaFilter;
+        }
+
+        set
+        {
+            searchCriteriaFilter = value;
+        }
+    }
+    public bool ShowPage { get; set; }
+    private IEnumerable<CodingFieldTypes> FieldTypes = Enumerable.Empty<CodingFieldTypes>();
+    public string EditSubClient { get; set; }
+    private string EditSoftware { get; set; }
+    private string EditBillableGroup { get; set; }
+    private string? DispositionCode { get; set; }
+    public bool ConfirmationDialog { get; set; }
+    public bool BatchConfirmDialog { get; set; }
+    public bool IsSelectAll { get; set; } = false;
+    public string SaveMode { get; set; } = string.Empty;
+    @* [Parameter]
+    public EventCallback<IEnumerable<SearchCriteria>> OnFilter { get; set; } *@
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await LocalStorageService.GetAsync<AuthenticatedUser>();
+        this.EmployeeID = user.EmployeeId;
+        this.screenName = "SearchAndCode";
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();            
+        if(projectGroup != null)
+        {
+            ProjectGroupID = projectGroup.ProjectGroupID;
+            SchemaName = projectGroup.SchemaName;                
+            ProjectGroupName = projectGroup.ProjectGroupName;
+        } 
+        AccountProperty.Clear();
+        await this.FetchAccountDetails();
+
+        if(ProjectGroupID == 7849)
+        {
+            await this.GetUserComments();
+        }
+        editableAccounts = new List<EmployeeAccountDetails>();
+    }
+    
+   
+    public async Task FetchAccountDetails()
+    {
+        try
+        {
+            
+            DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            await GetCodingFieldTypes();
+            if(!FieldTypes.Any(exp => exp.FieldType == "Search and Code"))
+            {
+                Toaster.Add("Search and edit feature not selected for this project group!", MatToastType.Danger, "Search and Code");
+                AccountProperty.Clear();
+                DisplayLoading(false);
+                return;
+            }
+
+            IEnumerable<SearchCriteria> searchCriterias = Enumerable.Empty<SearchCriteria>();
+            var searchParameters = new GridSearchParameters {
+            SearchCriterias = searchCriterias,
+            SearchValue = "",
+            ProjectGroupID = projectGroup.ProjectGroupID,
+            SchemaName = this.SchemaName,
+            EmployeeID = this.EmployeeID
+            };
+            var AuthState = (AuthStateProvider)AuthProvider;
+            searchAndCodeAccountDetails = await ApiHelper.PostUsingMsgPackAsync<SearchAndCodeAccountDetails[]>($"/SearchAndEdit/SearchAccounts", searchParameters, Http,  AuthState.Token);
+            @* if(this.ProjectGroupID != 7849)
+            {
+                searchAndCodeAccountDetails = await ApiHelper.PostUsingMsgPackAsync<SearchAndCodeAccountDetails[]>($"/SearchAndEdit/SearchAccounts", searchParameters, Http,  AuthState.Token);
+            }
+            else
+            {
+                searchAndCodeAccountDetails = await ApiHelper.PostUsingMsgPackAsync<SearchAndCodeAccountDetails[]>($"/SearchAndEdit/SearchBatchAccounts", searchParameters, Http,  AuthState.Token);
+            } *@
+            
+            var type = typeof(GetSearchAndCodeResult);
+            if (searchAndCodeAccountDetails != null && searchAndCodeAccountDetails.Count() > 0 && searchAndCodeAccountDetails[0].SearchResult!.Count() > 0 && searchAndCodeAccountDetails[0].Message == "Success")
+            {
+                this.isHide = false;
+                AccountProperty.Clear();
+                this._Accountinfo = searchAndCodeAccountDetails[0].SearchResult!;
+                this.UnqFieldResult = searchAndCodeAccountDetails[0].FieldResult!;
+                foreach (var item in searchAndCodeAccountDetails[0].FieldResult!)
+                {
+                    Console.WriteLine(item.Field! + " " + item.DisplayName!);
+                   AccountProperty.Add(Tuple.Create(type.GetProperty(item.Field!), item.DisplayName!)!);
+                }                   
+            } 
+            else if (searchAndCodeAccountDetails != null && searchAndCodeAccountDetails.Count() > 0 && searchAndCodeAccountDetails[0].SearchResult!.Count() == 0 && searchAndCodeAccountDetails[0].Message != "Success") 
+            {
+                AccountProperty.Clear();
+                Toaster.Add(searchAndCodeAccountDetails[0].Message, MatToastType.Danger, "Search and Code");
+            }
+            else
+            {
+               AccountProperty.Clear();
+               Toaster.Add("No Accounts Available", MatToastType.Danger, "Search and Code");
+            }
+            this.IsEditable = false;            
+            this.isHide = false;
+            DisplayLoading(false);
+                      
+        }
+        catch (Exception ex)
+        {
+            this.isHide = true;
+            Logger.LogError(ex, ex.Message);
+            Toaster.Add(ex.Message, MatToastType.Danger, "Search and Code");
+            DisplayLoading(false);
+        }
+    }
+    private async Task GetCodingFieldTypes()
+    {
+        try
+        {
+            
+            DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider!;
+            FieldTypes = await
+            ApiHelper.GetUsingMsgPackAsync<CodingFieldTypes[]>($"/EditTransaction/GetCodingFieldTypes/ProjectGroupID/{projectGroup.ProjectGroupID}",
+            Http,
+            AuthState!.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);               
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task GetClientDisposition()
+    {
+        try
+        {
+            
+            DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider!;
+            ClientDispositionList = await
+            ApiHelper.GetUsingMsgPackAsync<MasterTableData[]>($"/SearchAndEdit/GetClientDisposition/ProjectGroupID/{projectGroup.ProjectGroupID}/SchemaName/{this.SchemaName}",
+            Http,
+            AuthState!.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);               
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    protected async Task OnProjectGroupChanged(NexgenProjectGroups pg)
+    {
+        this.ProjectGroupID = pg.ProjectGroupID;
+        this.ProjectGroupName = pg.ProjectGroupName;
+        this.SchemaName = pg.SchemaName;
+        await this.FetchAccountDetails();
+        await this.GetClientDisposition();        
+        editableAccounts = new List<EmployeeAccountDetails>();
+        this.StateHasChanged();
+    }
+    private Task OnItemsChanged(IEnumerable<GetSearchAndCodeResult> items)
+    {
+        return ItemsChanged.InvokeAsync(items);
+    }
+    private Task OnCheckedChanged(Tuple<GetSearchAndCodeResult, bool> args)
+    {
+        args.Item1.IsChecked = args.Item2;
+        if(args.Item2)
+        {
+            UploadIds.Add(args.Item1.UploadID);
+        }
+        else
+        {
+            UploadIds.Remove(args.Item1.UploadID);
+        }
+        return Task.CompletedTask;
+    }
+    private Task OnBulkCheckedChanged(Tuple<IEnumerable<GetSearchAndCodeResult>, bool> args)
+    {
+            if(args.Item2)
+            {
+                IsSelectAll = true;
+                foreach (var item in args.Item1)
+                {
+                    item.IsChecked = args.Item2;
+                    UploadIds.Add(item.UploadID);
+                }
+            }
+            if(!args.Item2)
+            {
+                UploadIds.Clear();
+            }
+            return BulkCheckedChanged.InvokeAsync(args.Item1);
+    }
+    private Task OnClearSelection(bool value)
+    {
+            IsSelectAll = false;
+            foreach (var account in _Accountinfo)
+            {
+                account.IsChecked = value;
+            }
+            UploadIds.Clear();
+            return Task.CompletedTask;
+    }
+    public async void EditAccountDetails(GetSearchAndCodeResult account)
+    {
+        try
+        {
+            DisplayLoading(true, "Loading"); 
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var AccountDetailData = await ApiHelper.GetUsingMsgPackAsync<SearchAndCodeAllocatedAccounts[]>($"/SearchAndEdit/GetAllocatedAccountDetails/UploadID/{account.UploadID}/AccountType/{account.AccountType}/ProjectGroupID/{projectGroup.ProjectGroupID}/EmployeeID/{this.EmployeeID}/SchemaName/{this.SchemaName}", Http, AuthState.Token);
+
+            if(AccountDetailData[0].allocatedAccounts.Count() == 0)    
+            {
+                Toaster.Add("You have Already Fetched the other Account.!", MatToastType.Danger, "Search and Code");
+            }
+
+            if(AccountDetailData[0].allocatedAccounts.Count() > 0)    
+            {
+                var Accounts = AccountDetailData[0].allocatedAccounts.ToList();
+                editableAccounts.Add(Accounts.First());
+                EditSubClient = Accounts.First().SubClient;
+                EditBillableGroup = Accounts.First().BillableGroup;
+                EditSoftware = Accounts.First().Software; 
+                this.screenName = "SearchAndCode";    
+                this.HasSkip = AccountDetailData[0].HasSkip;
+                this.IsEditable = true;
+                this.isHide = true;
+            }
+            if(AccountDetailData[0].editableFields.Count() > 0)
+            {
+               this.IsBillableGroupDisable = AccountDetailData[0].editableFields.Any(exp => exp.CodingField == "BillableGroupID" && exp.IsEditable == true);
+               this.IsSubClientDisable = AccountDetailData[0].editableFields.Any(exp => exp.CodingField == "SubClientID" && exp.IsEditable == true);
+               this.IsSoftwareDisable = AccountDetailData[0].editableFields.Any(exp => exp.CodingField == "SubClientID" && exp.IsEditable == true);
+               this.IsTask = AccountDetailData[0].editableFields.Any(exp => exp.CodingField == "Task" && exp.IsEditable == true);
+               this.IsSubTask = AccountDetailData[0].editableFields.Any(exp => exp.CodingField == "SubTask" && exp.IsEditable == true);               
+               this.editableFields = AccountDetailData[0].editableFields.ToList();
+            }
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            this.IsEditable = false;            
+            this.isHide = false;
+            Logger.LogError(ex, ex.Message);
+            Toaster.Add("No Accounts Available", MatToastType.Danger, "Search and Code");
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+              
+       // return Task.CompletedTask;
+    }
+
+    @* protected async Task OnBulkCompletionClicked()
+    {
+             try
+             {
+                DisplayLoading(true, "Loading");
+                if(this.UploadIds.Count == 0)
+                {
+                    ToasterService.AddDanger("Search and Code","Kindly select accounts to complete.");
+                    DisplayLoading(false);
+                    return;
+                }
+                if(this.UploadIds.Count > 0)
+                {
+                    var AuthState = (AuthStateProvider)AuthProvider;
+                    var token = await LocalStorageService.GetAsync<string>("Token");   
+                    var bulkUpload = new BulkCompletionUpload
+                    {
+                        EmployeeID = this.EmployeeID, 
+                        ProjectGroupID = this.ProjectGroupID,
+                        UploadIDs = this.UploadIds,
+                        SchemaName = this.SchemaName,
+                        Comments = "Test",
+                        AccountStatusID = 1
+                    };
+                    var response = await ApiHelper.PostUsingMsgPackAsync<ResultResponse>("/SearchAndEdit/GetBulkUploadAccountDetails", bulkUpload, Http, AuthState.Token);
+                    if(response != null) {
+                        ToasterService!.AddSuccess("Search and Code","Saved Successfully");
+                        DisplayLoading(false);
+                        await this.FetchAccountDetails();
+                        
+                    }
+                }
+             }
+             catch(Exception ex)
+             {
+                Logger.LogError(ex, ex.Message);
+                ToasterService.AddDanger("Search and Code", ex.InnerException.Message.ToString());
+                DisplayLoading(false);  
+             }  
+    } *@
+    
+    private async Task OnCompletedClick()
+    {
+         try
+         {
+                if(this.UploadIds.Count == 0)
+                {
+                    ToasterService!.AddDanger("Search and Code","Kindly select accounts to complete.");
+                    return;
+                }
+                DisplayLoading(true, "Loading");
+                if(this.UploadIds.Count > 0)
+                {
+                    var AuthState = (AuthStateProvider)AuthProvider;
+                    var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+                    var token = await LocalStorageService.GetAsync<string>("Token");   
+                    var bulkUpload = new BulkCompletion
+                    {
+                        EmployeeId = this.EmployeeID, 
+                        ProjectGroupID = projectGroup.ProjectGroupID,
+                        BulkUpdateUploadIdList = string.Join(",", this.UploadIds),
+                        SchemaName = this.SchemaName,
+                        Comments = this.Comments,
+                        InsCat = "",
+                        InsPhoneNumber = "",
+                        status = 1,
+                        ClientDisposition = this.DispositionCode,
+
+                    };
+                    
+                    var response = await ApiHelper.PostUsingMsgPackAsync<List<SuccessConfirmation>>("/SearchAndEdit/BulkCompletion", bulkUpload, Http, AuthState.Token);
+                    if(response != null) {
+                        if(response[0].StatusCode == 1)
+                        {
+                            ToasterService!.AddSuccess(response[0].Status!, "Search and Code");
+                        }
+                        if(response[0].StatusCode == -1)
+                        {
+                            ToasterService!.AddDanger(response[0].Status!, "Search and Code");
+                        }                        
+                        DisplayLoading(false);
+                        await this.FetchAccountDetails();
+                    }
+                   
+                    await OnCancelClick();
+                }
+             }
+             catch(Exception ex)
+             {
+                Logger.LogError(ex, ex.Message);
+                ToasterService.AddDanger("Search and Code", ex.InnerException.Message.ToString());
+                DisplayLoading(false);  
+             }  
+    }
+    protected Task OnBulkCompletionClicked()
+    {        
+        if(this.UploadIds.Count == 0)
+        {
+            ToasterService!.AddDanger("Search and Code","Kindly select accounts to complete.");
+            return Task.CompletedTask;
+        }
+        this.ConfirmationDialog = true;
+        return Task.CompletedTask;
+    }
+    protected Task OnBatchBulkCompletionClicked()
+    {        
+        if(this.UploadIds.Count == 0)
+        {
+            ToasterService!.AddDanger("Search and Code","Kindly select accounts to complete.");
+            return Task.CompletedTask;
+        }
+        this.BatchConfirmDialog = true;
+        return Task.CompletedTask;
+    }
+    protected async Task OnBatchAccountBulkCompletion()
+    { 
+        try
+        {
+            DisplayLoading(true, "Loading"); 
+            List<string> UniqueColValues = new List<string>();
+            List<BatchAccounts> accountList = new List<BatchAccounts>();
+            SaveBatchAccounts inputBatchModel = new SaveBatchAccounts();
+            if(this.UploadIds.Count == 0)
+            {
+                DisplayLoading(false);
+                ToasterService!.AddDanger("Search and Code","Kindly select accounts to complete.");
+                await OnCancelClick();
+                return;
+            }
+            var selectedAccounts = this._Accountinfo.Where(exp => this.UploadIds.Contains(exp.UploadID)).ToList();
+            var distinctSelectedAccounts = selectedAccounts.DistinctBy(exp => new {exp.ChartIDOrFileID, exp.PageNumber, exp.TotalCount}).ToList();
+            if(distinctSelectedAccounts.Count() > 1)
+            {
+                DisplayLoading(false);
+                ToasterService!.AddDanger("Search and Code", "Kindly select single batch accounts");    
+                await OnCancelClick();
+                return;       
+            }
+            var inputModel = distinctSelectedAccounts.FirstOrDefault();
+            foreach(var unqCols in this.UnqFieldResult)
+            {
+                if(unqCols.Field != "AssignedDate")
+                {
+                    var accountValue = typeof(GetSearchAndCodeResult)
+                    .GetProperty(unqCols.Field)?
+                    .GetValue(inputModel)?
+                    .ToString();
+                    UniqueColValues.Add(unqCols.Field + " = '"+accountValue+"'");
+                }
+            }
+            string whereclause = string.Join(" AND ", UniqueColValues);
+            if(IsSelectAll)
+            {
+                this.SaveMode = "SaveByBatch";
+                @* var accounts = new BatchAccounts
+                {
+                    ChartIDOrFileID   = inputModel!.ChartIDOrFileID,
+                    TotalCount = inputModel.TotalCount,
+                    PageNumber = inputModel.PageNumber,
+                    UploadID = inputModel.UploadID,
+                    UploadTemplateID = inputModel.UploadTemplateID
+
+                };
+                accountList.Add(accounts); *@
+                foreach(var item in selectedAccounts)
+                {
+                    var accounts = new BatchAccounts
+                    {
+                        ChartIDOrFileID   = item!.ChartIDOrFileID,
+                        TotalCount = item.TotalCount,
+                        PageNumber = item.PageNumber,
+                        UploadID = item.UploadID,
+                        UploadTemplateID = item.UploadTemplateID,
+                        Comments = item.BufferColumn43
+                    };
+                    accountList.Add(accounts);
+                }
+                inputBatchModel.Accounts = accountList; 
+                inputBatchModel.SchemaName = this.SchemaName;
+                inputBatchModel.ProjectGroupID = this.ProjectGroupID;
+                inputBatchModel.EmployeeID = this.EmployeeID;
+                inputBatchModel.UniqueColumnValues = whereclause;
+                inputBatchModel.SaveMode = this.SaveMode;
+                inputBatchModel.CommonComments = this.CommonComments;
+                
+            }
+            else
+            {
+                this.SaveMode = "SaveByAccounts";
+                foreach(var item in selectedAccounts)
+                {
+                    var accounts = new BatchAccounts
+                    {
+                        ChartIDOrFileID   = item!.ChartIDOrFileID,
+                        TotalCount = item.TotalCount,
+                        PageNumber = item.PageNumber,
+                        UploadID = item.UploadID,
+                        UploadTemplateID = item.UploadTemplateID,
+                        Comments = item.BufferColumn43
+                    };
+                    accountList.Add(accounts);
+                }
+                inputBatchModel.Accounts = accountList; 
+                inputBatchModel.SchemaName = this.SchemaName;
+                inputBatchModel.ProjectGroupID = this.ProjectGroupID;
+                inputBatchModel.EmployeeID = this.EmployeeID;
+                inputBatchModel.UniqueColumnValues = whereclause;
+                inputBatchModel.SaveMode = this.SaveMode;
+                inputBatchModel.CommonComments = this.CommonComments;
+            }
+
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var response = await ApiHelper.PostUsingMsgPackAsync<SuccessConfirmation>("/SearchAndEdit/SaveBulkBatchAccountCompletion", inputBatchModel, Http, AuthState.Token);
+            if(response != null)
+            {
+                if(response.StatusCode == 1)
+                {
+                    ToasterService!.AddSuccess("Search and Code","Saved Successfully");
+                }
+                if(response.StatusCode == -1)
+                {
+                    ToasterService!.AddDanger("Search and Code",response.Status!);
+                }
+            }
+            else
+            {
+                ToasterService!.AddDanger("Search and Code","Error Occured");
+            }
+            await this.FetchAccountDetails();
+            await OnCancelClick();
+            DisplayLoading(false);
+           
+        }   
+        catch(Exception e)  
+        {
+            ToasterService!.AddDanger("Search and Code","Error Occured");
+            DisplayLoading(false);
+            await OnCancelClick();
+
+        }
+    }
+    public async Task GetUserComments()
+    {
+            try
+            {
+                DisplayLoading(true, "Loading");
+                var AuthState = (AuthStateProvider)AuthProvider;
+                string apiURL = $"SearchAndEdit/GetUserComments/ProjectGroupID/{this.ProjectGroupID}/SchemaName/{this.SchemaName}";
+                CommentList = await ApiHelper.GetUsingMsgPackAsync<IEnumerable<MasterTableData>>(apiURL, Http, AuthState.Token);
+                await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+                DisplayLoading(false);
+            }
+            catch (Exception ex)
+            {
+                Toaster.Add("Error in fetting comments", MatToastType.Danger, "Search and Code");
+                DisplayLoading(false);
+            }
+    }
+    public async Task OnChangeUserComments(string MasterValue, int UploadID)
+    {
+        Console.WriteLine(MasterValue);
+        this._Accountinfo.Where(fld => fld.UploadID == UploadID).ToList().ForEach(exp => exp.BufferColumn43 = MasterValue);
+        var obj = this._Accountinfo.Where(fld => fld.UploadID == UploadID).FirstOrDefault();
+        Console.WriteLine(obj.BufferColumn43);
+    }
+    protected Task OnCancelClick()
+    {
+        this.DispositionCode = string.Empty;
+        this.Comments = string.Empty;
+        //this.CommonComments = string.Empty;
+        this.UploadIds = new List<long>();
+        this.IsSelectAll = false;
+        this.OnClearSelection(false);
+        this.ConfirmationDialog = false;
+        this.BatchConfirmDialog = false;
+        
+        return Task.CompletedTask;
+    }
+    protected async Task OnPendedClick()
+    {
+         try
+         {
+                if(this.UploadIds.Count == 0)
+                {
+                    ToasterService!.AddDanger("Search and Code","Kindly select accounts to complete.");
+                    return;
+                }
+                DisplayLoading(true, "Loading");
+                if(this.UploadIds.Count > 0)
+                {
+                    var AuthState = (AuthStateProvider)AuthProvider;
+                    var token = await LocalStorageService.GetAsync<string>("Token");   
+                    var bulkUpload = new BulkCompletion
+                    {
+                        EmployeeId = this.EmployeeID, 
+                        ProjectGroupID = this.ProjectGroupID,
+                        BulkUpdateUploadIdList = string.Join(",", this.UploadIds),
+                        SchemaName = this.SchemaName,
+                        Comments = this.Comments,
+                        InsCat = "",
+                        InsPhoneNumber = "",
+                        status = 2,
+                        ClientDisposition = this.DispositionCode,
+                    };
+                    
+                    var response = await ApiHelper.PostUsingMsgPackAsync<List<SuccessConfirmation>>("/SearchAndEdit/BulkCompletion", bulkUpload, Http, AuthState.Token);
+                    if(response != null) {
+                        if(response[0].StatusCode == 1)
+                        {
+                            ToasterService!.AddSuccess(response[0].Status!, "Search and Code");
+                        }
+                        if(response[0].StatusCode == -1)
+                        {
+                            ToasterService!.AddDanger(response[0].Status!, "Search and Code");
+                        }
+                        DisplayLoading(false);
+                        await this.FetchAccountDetails();
+                    }
+                    await OnCancelClick();
+                }
+             }
+             catch(Exception ex)
+             {
+                Logger.LogError(ex, ex.Message);
+                ToasterService.AddDanger("Search and Code", ex.InnerException.Message.ToString());
+                DisplayLoading(false);  
+             }  
+    }
+    private async Task btnDownload()
+    {
+        try 
+        {
+            DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var dsSelectedUniqueField = await ApiHelper.GetUsingMsgPackAsync<GetFieldResult[]>("/SearchAndEdit/GetUniqueColumns/ProjectGroupID/"+projectGroup.ProjectGroupID, Http, AuthState.Token);
+
+            var dsExcelAccountDetails = await ApiHelper.GetUsingMsgPackAsync<GetSearchAndCodeResult[]>
+            ("/SearchAndEdit/DownloadExcelSearchAndCode/UploadTemplateID/0/Filter/ManualAssign/ProjectGroupID/" + projectGroup.ProjectGroupID + "/SchemaName/" + this.SchemaName + "/EmployeeID/" + this.EmployeeID,
+            Http, AuthState.Token);
+                
+            if (!downloadExcelHeaders.Contains("SubClient"))
+                downloadExcelHeaders.Add("SubClient");
+            if (!downloadExcelHeaders.Contains("BillableGroup"))
+                downloadExcelHeaders.Add("BillableGroup");
+            if (!downloadExcelHeaders.Contains("Software"))
+                downloadExcelHeaders.Add("Software");
+          
+            if (!downloadExcelHeadersDisplay.Contains("SubClient"))
+                downloadExcelHeadersDisplay.Add("SubClient");
+            if (!downloadExcelHeadersDisplay.Contains("BillableGroup"))
+                downloadExcelHeadersDisplay.Add("BillableGroup");
+            if (!downloadExcelHeadersDisplay.Contains("Software"))
+                downloadExcelHeadersDisplay.Add("Software");
+            
+            foreach (GetFieldResult item in dsSelectedUniqueField)
+            {
+                if (!downloadExcelHeaders.Contains(item.Field))
+                {
+                    downloadExcelHeaders.Add(item.Field);
+                }
+                if (!downloadExcelHeadersDisplay.Contains(item.DisplayName))
+                {
+                    downloadExcelHeadersDisplay.Add(item.DisplayName);    
+                }
+            }
+            
+            if (!downloadExcelHeaders.Contains("Employee"))
+                downloadExcelHeaders.Add("Employee");
+            if (!downloadExcelHeadersDisplay.Contains("Employee"))
+                downloadExcelHeadersDisplay.Add("Employee");
+
+            var bytes = await ExcelPackage.GenerateTemplateAsync1(downloadExcelHeaders.ToArray(), downloadExcelHeadersDisplay.ToArray(), dsExcelAccountDetails);
+            await BlazorDownloadFileService.DownloadFile("AccountDetails.xlsx", bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            DisplayLoading(false);
+        }
+        catch(Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            ToasterService.AddDanger("Search and Code", ex.InnerException.Message.ToString());
+            DisplayLoading(false);  
+        }
+        finally
+        {
+            DisplayLoading(false);  
+        }
+    }
+
+     @* private async Task<string> DisplaySubGrid(GetSearchAndCodeResult item)
+     {
+        Console.WriteLine(item.ChartIDOrFileID);
+        item.ShowCaretButton = !item.ShowCaretButton;
+        if (item.ShowCaretButton == true)
+        {
+                DisplayLoading(true, "Loading");
+                var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+                IEnumerable<SearchCriteria> searchCriterias = Enumerable.Empty<SearchCriteria>();
+                var searchParameters = new GridSearchParameters {
+                SearchCriterias = searchCriterias,
+                SearchValue = "",
+                ProjectGroupID = projectGroup.ProjectGroupID,
+                SchemaName = this.SchemaName,
+                EmployeeID = this.EmployeeID
+                };
+
+                var AuthState = (AuthStateProvider)AuthProvider;
+                searchAndCodeBatchAccountDetails = await ApiHelper.PostUsingMsgPackAsync<SearchAndCodeAccountDetails[]>($"/SearchAndEdit/GetAccountDetailsofBatch", searchParameters, Http,  AuthState.Token);
+            
+                var type = typeof(GetSearchAndCodeResult);
+                if (searchAndCodeBatchAccountDetails != null && searchAndCodeBatchAccountDetails.Count() > 0 && searchAndCodeBatchAccountDetails[0].SearchResult!.Count() > 0 && searchAndCodeAccountDetails[0].Message == "Success")
+                {
+                    BatchAccountProperty.Clear();
+                    this._BatchAccountinfo = searchAndCodeBatchAccountDetails[0].SearchResult!;
+                    foreach (var field in searchAndCodeBatchAccountDetails[0].FieldResult!)
+                    {
+                        BatchAccountProperty.Add(Tuple.Create(type.GetProperty(field.Field!), field.DisplayName!)!);
+                    }                   
+                } 
+                else if (searchAndCodeBatchAccountDetails != null && searchAndCodeBatchAccountDetails.Count() > 0 && searchAndCodeBatchAccountDetails[0].SearchResult!.Count() == 0 && searchAndCodeAccountDetails[0].Message != "Success") 
+                {
+                    BatchAccountProperty.Clear();
+                    Toaster.Add(searchAndCodeBatchAccountDetails[0].Message, MatToastType.Danger, "Search and Code");
+                }
+                else
+                {
+                    BatchAccountProperty.Clear();
+                    Toaster.Add("No Accounts Available", MatToastType.Danger, "Search and Code");
+                }
+        }
+        DisplayLoading(false);  
+        return string.Empty;
+     } *@
+
+    private void DisplayLoading(bool display, string? progressMessage = null)
+    {
+        displayLoading = display;
+        progressText = progressMessage ?? string.Empty;
+        StateHasChanged();
+    }
+    public Task OnClientDispositionChanged(ChangeEventArgs args)
+    {
+        DispositionCode = args!.Value!.ToString()!;
+        return Task.CompletedTask;
+    }
+    private async Task OnFilter(IEnumerable<SearchCriteria> searchCriterias)
+    {
+            DisplayLoading(true, "Loading");     
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            List<string> searchValueList = new List<string>();
+            string searchValue = string.Empty;
+            foreach(var s in searchCriterias)
+            {
+                searchValueList.Add(s.SearchValue);
+                searchValue = s.SearchValue;
+                s.SearchValues = searchValueList;
+                //s.Field = s.Field.Replace(' ','_');
+            }
+        
+            var searchParameters = new GridSearchParameters {
+                SearchCriterias = searchCriterias,
+                SearchValue = "",
+                ProjectGroupID = projectGroup.ProjectGroupID,
+                SchemaName = this.SchemaName,
+                EmployeeID = this.EmployeeID
+                
+            };
+            var AuthState = (AuthStateProvider)AuthProvider;
+            searchAndCodeAccountDetails = await ApiHelper.PostUsingMsgPackAsync<SearchAndCodeAccountDetails[]>($"/SearchAndEdit/SearchAccounts", searchParameters, Http,  AuthState.Token);
+            var type = typeof(GetSearchAndCodeResult);
+            if (searchAndCodeAccountDetails[0].SearchResult!.Count() > 0 && searchAndCodeAccountDetails[0].Message == "Success")
+            {
+                this.isHide = false;
+                AccountProperty.Clear();
+                this._Accountinfo = searchAndCodeAccountDetails[0].SearchResult!;
+                foreach (var item in searchAndCodeAccountDetails[0].FieldResult!)
+                {
+                    AccountProperty.Add(Tuple.Create(type.GetProperty(item.Field!), item.DisplayName!)!);
+                }                   
+            }  
+            else if (searchAndCodeAccountDetails[0].SearchResult!.Count() == 0 && searchAndCodeAccountDetails[0].Message != "Success")
+            {
+                Toaster.Add(searchAndCodeAccountDetails[0].Message, MatToastType.Danger, "Search and Code");
+            }
+            else
+            {
+                Toaster.Add("No Accounts Available", MatToastType.Danger, "Search and Code");
+            }
+            this.IsEditable = false;            
+            this.isHide = false;
+            DisplayLoading(false);  
+    }
+
+    [MessagePackObject]
+    public class BulkCompletionUpload
+    {
+        [Key(0)]
+        public List<long> UploadIDs { get; set; } = null!;
+        
+        [Key(1)]
+        public int ProjectGroupID { get; set; }
+        
+        [Key(2)]
+        public int EmployeeID { get; set; }
+        
+        [Key(3)]
+        public string? SchemaName { get; set; } 
+        
+        [Key(4)]
+        public string? Comments { get; set; }
+        
+        [Key(5)]
+        public int AccountStatusID { get; set; }
+    }
+
+     @* [MessagePackObject]
+     public class GridSearchParameters
+     {
+      
+      [Key(0)]
+      public int ProjectGroupID { get; set; }
+
+      [Key(1)]
+      public string? SchemaName { get; set; }
+
+      [Key(2)]
+      public int EmployeeID { get; set; }
+      
+      [Key(3)]
+      public IEnumerable<SearchCriteria> SearchCriterias { get; set; } = null!;
+
+      [Key(4)]
+      public string? SearchValue { get; set; } //a.MRN_Number like '%2022%'
+      
+     } *@
+}

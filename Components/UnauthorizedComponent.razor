@@ -1,0 +1,74 @@
+@inject AuthStateProvider AuthenticationProvider
+
+@if (ErrorType == AuthenticationErrorType.Unauthorized || ErrorType == AuthenticationErrorType.None)
+{
+    <div class="content-wrapper">
+        <section class="content-header"  style="display:@ModalDisplay">
+        </section>
+        <section class="content">
+            <div class="container bg-transparent">
+                <h1>Unauthorized</h1>
+                <p>You're not authorized to reach this page.</p>
+                <p>You can try refreshing the page or you may need to log in as a different user.</p>
+            </div>
+        </section>
+    </div>
+}
+else if (ErrorType == AuthenticationErrorType.Network)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 100vh; font-size: xx-large;">
+        <div class="p-2">
+            <div class="d-flex justify-content-center">
+                <span class="lead m-2" style="font-size: xxx-large;">Server is not reachable</span>
+            </div>
+            <div class="d-flex justify-content-center">
+                <ul class="lead" style="font-size: medium; list-style-position: inside;list-style-type: circle;">
+                    <li>Check if the Network (including VPN if required) is connected</li>
+                    <li>Check if you are able to access </li>
+                    <li>Log in to  and refresh this page</li>
+                </ul>
+            </div>
+            <span class="lead" style="font-size: large;">Please reach out to the software team if none of the above works</span>
+        </div>
+    </div>
+}
+else if (ErrorType == AuthenticationErrorType.Unknown)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 100vh; font-size: xx-large;">
+        <div class="p-2">
+            <div class="d-flex justify-content-center">
+                <span class="lead m-2" style="font-size: xxx-large;">Session error</span>
+            </div>
+            <div class="d-flex justify-content-center">
+                <ul class="lead" style="font-size: medium; list-style-position: inside;list-style-type: circle;">
+                    <li>Log out of the AdroitAR and  applications and try logging in again</li>
+                    <li>Check if the application is working in incognito mode</li>
+                </ul>
+            </div>
+            <span class="lead" style="font-size: large;">Please reach out to the software team if none of the above works</span>
+        </div>
+    </div>
+}
+
+@code
+{
+    private AuthenticationErrorType ErrorType = AuthenticationErrorType.None;
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; }
+    
+    [Parameter]
+    public string ModalDisplay {get; set;}="block";
+
+    protected override Task OnInitializedAsync()
+    {
+        AuthenticationProvider.AuthenticationErrorTypeChanged += (_, args) => DisplayError(args.ErrorType);
+        return Task.CompletedTask;
+    }
+
+    private void DisplayError(AuthenticationErrorType errorType)
+    {
+        ErrorType = errorType;
+        StateHasChanged();
+    }
+}

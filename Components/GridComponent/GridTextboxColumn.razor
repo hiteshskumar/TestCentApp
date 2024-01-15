@@ -1,0 +1,252 @@
+@typeparam TItem
+
+@using System.Linq.Expressions
+@using System.Reflection
+@using ChargesWFM.UI.Components.GridComponent.Filters
+@using Models
+@using Types
+
+@implements ISearchableGridColumn<TItem>
+@implements IDisposable
+
+<th class="border px-2 py-1" style="color: #666; background-color: #eee; font-weight: 600;">
+    <div>
+        <div class="d-flex justify-content-between mb-1">
+            <span class="@headerClass" @onclick="OnHeaderClicked">
+                @Title 
+            </span>
+            @if (_displayFilterCriteria)
+            {
+                <span class="filter-contain" @onclick="@OnSearchCriteriaClicked" @onblur="@OnSearchCriteriaFilterBlur" style="user-select: none;" tabindex="0"><i class="fa fa-filter me-1"></i>@SearchCriteriaFilter.ToFriendlyString()</span>
+            }
+            @if (DataTable.SortColumn?.Item1?.Equals(field) == true && DataTable.SortColumn?.Item2 == GridSortOrder.Ascending)
+            {
+                <i class="bi bi-sort-up"></i>
+            }
+            else if (DataTable.SortColumn?.Item1?.Equals(field) == true && DataTable.SortColumn?.Item2 == GridSortOrder.Descending)
+            {
+                <i class="bi bi-sort-down"></i>
+            }
+        </div>
+        @if (AllowFiltering)
+        {
+            <div class="d-flex align-items-center">
+                @if (_isBoolean)
+                {
+                    <BooleanFilter ValueChanged="@OnFilter" IsNullableBoolean="@_isNullableBoolean"></BooleanFilter>
+                }
+                else if (_isDateTime)
+                {
+                    <DateTimeFilter DateSelected="@OnFilterDateTime"></DateTimeFilter>
+                }
+                else
+                {
+                    <input id="@id" type="text" class="form-control border rounded p-1 w-100 font-13" value="@FilterValue?.ToString()" @onkeydown="@(e => OnkeyDown(e, FilterValue!))" @oninput="@(e => OnFilter(e))" style="color: #666; font-weight: 400; outline: none;" />
+                    @if (FilterValue != null)
+                    {
+                        <i class="bi bi-x text-danger pointer" @onclick="OnRemoveFilter" style="margin-left: -20px;"></i>
+                    }
+                }
+            </div>
+            @if (_displayDropdown)
+            {
+                var filters = FieldType?.Equals(typeof(string)) == true ? TextFilters : NumberFilters;
+                <SearchCriteriaFiltersDropDown Filters="@filters" FilterSelected="@OnSearchCriteriaFilterChanged"></SearchCriteriaFiltersDropDown>
+            }
+        }
+    </div>
+</th>
+
+@code
+{
+    private string id => $"{Field?.ToLower() ?? UniqueId.ToString()}-filter-input";
+    private string headerClass => AllowSorting && DataTable.AllowSorting ? "pointer user-select-none text-truncate fw-normal" : "user-select-none text-truncate fw-normal";
+    private Func<TItem, object> _getValue;
+    private Expression<Func<TItem, object>> _valueExpression;
+    private bool _displayDropdown;
+    private bool isEnterPressed = false;
+    private bool _displayFilterCriteria => AllowFiltering && !SimpleFilter && !_isBoolean;
+    private bool _isDateTime => FieldType == typeof(DateTime) || FieldType == typeof(DateTime?);
+    private bool _isBoolean => FieldType == typeof(bool) || FieldType == typeof(bool?);
+    private bool _isNullableBoolean => FieldType == typeof(bool?);
+    private string field => Field ?? UniqueId.ToString();
+    private Func<TItem, object> _getShowHideValue;
+    private Expression<Func<TItem, object>> _valueShowHideExpression;
+    private IEnumerable<SearchCriteriaFilters> TextFilters = new List<SearchCriteriaFilters>
+    {
+        SearchCriteriaFilters.Equal, SearchCriteriaFilters.NotEqual, SearchCriteriaFilters.Contains, SearchCriteriaFilters.NotContains,
+        SearchCriteriaFilters.StartsWith, SearchCriteriaFilters.NotStartsWith, SearchCriteriaFilters.EndsWith, SearchCriteriaFilters.NotEndsWith
+    };
+    private IEnumerable<SearchCriteriaFilters> NumberFilters = new List<SearchCriteriaFilters>
+    {
+        SearchCriteriaFilters.Equal, SearchCriteriaFilters.NotEqual, SearchCriteriaFilters.GreaterThan, SearchCriteriaFilters.GreaterThanOrEqual,
+        SearchCriteriaFilters.LesserThan, SearchCriteriaFilters.LesserThanOrEqual
+    };
+
+    [Parameter]
+    public string Title { get; set; }
+
+    [Parameter]
+    public Expression<Func<TItem, object>> ValueExpression { get { return _valueExpression; } set { _valueExpression = value; _getValue = _valueExpression.Compile(); } }
+ 
+    [Parameter]
+    public bool AllowFiltering { get; set; }
+
+    [Parameter]
+    public bool AllowSorting { get; set; }
+
+    [Parameter]
+    public bool SimpleFilter { get; set; } = true;
+    
+    [Parameter]
+    public SearchCriteriaFilters SearchCriteriaFilter { get; set; }
+
+    [Parameter]
+    public object FilterValue { get; set; }
+
+    [Parameter]
+    public string Field { get; set; }
+
+    [Parameter]
+    public Type FieldType { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem> Template { get; set; }
+
+    [CascadingParameter]
+    Grid<TItem> DataTable { get; set; }
+    [Parameter]
+    public SearchCriteriaFilters DefaultSearchCriteria { get; set; } = SearchCriteriaFilters.Contains;
+    [Parameter]
+    public EventCallback<Tuple<TItem, object>> TextChanged { get; set; }
+    [Parameter]
+    public Expression<Func<TItem, object>> ValueShowHideExpression 
+    { 
+        get 
+        { 
+            return _valueShowHideExpression; 
+        } 
+        set 
+        { 
+            _valueShowHideExpression = value; 
+            _getShowHideValue = _valueShowHideExpression.Compile(); 
+        } 
+    } 
+    public Guid UniqueId { get; private set; } = Guid.NewGuid();
+    protected override Task OnInitializedAsync()
+    {
+        DataTable.AddColumn(this);
+        if (SimpleFilter)
+        {
+            SearchCriteriaFilter = DefaultSearchCriteria;
+        }
+        else
+        {
+            SearchCriteriaFilter = FieldType?.Equals(typeof(string)) == true ? SearchCriteriaFilters.Contains : SearchCriteriaFilters.Equal;
+        }
+        return Task.CompletedTask;
+    }
+
+    public object GetValue(TItem item)
+    {
+        if (_getValue == null)
+        {
+            return default;
+        }
+        return _getValue(item);
+    }
+    public async Task ItemChanged(TItem item, ChangeEventArgs args)
+    {
+        var value = args.Value;
+        await TextChanged.InvokeAsync(Tuple.Create(item, value));
+    }
+
+    public void Dispose()
+    {
+        DataTable.RemoveColumn(this);
+    }
+
+    private Task OnHeaderClicked()
+    {
+        if (!AllowSorting || !DataTable.AllowSorting)
+        {
+            return Task.CompletedTask;
+        }
+        var sortOrder = DataTable.SortColumn?.Item2 == GridSortOrder.Ascending ? GridSortOrder.Descending : GridSortOrder.Ascending;
+        return DataTable.HeaderClicked(Field, _getValue, sortOrder);
+    }
+
+    private Task OnFilter(ChangeEventArgs args)
+    {
+        FilterValue = args.Value.ToString();
+        return Task.CompletedTask;
+    }
+
+    private Task OnkeyDown(KeyboardEventArgs args, object value)
+    {
+        isEnterPressed = false;
+        if(args.Key.Equals("Enter"))
+        {
+            isEnterPressed = true;
+        }
+        else if(args.Key.Equals("Control") || args.Key.Equals("Alt") || args.Key.Equals("Shift"))
+        {
+            return Task.CompletedTask;
+        } 
+
+        return OnFilter(value);
+    }
+
+    private Task OnFilter(object value)
+    {
+        if (string.IsNullOrEmpty(value?.ToString()) == true)
+        {
+            return OnRemoveFilter();
+        }
+        FilterValue = value;
+        var field = Field ?? UniqueId.ToString();
+        return DataTable.ApplyFilter(_getValue, field, SearchCriteriaFilter, value, isEnterPressed);
+    }
+
+    private Task OnFilterDateTime(DateTime? value)
+    {
+        return OnFilter((object)value);
+    }
+
+    private Task OnRemoveFilter()
+    {
+        FilterValue = null;
+        return DataTable.RemoveFilter(Field ?? UniqueId.ToString());
+    }
+
+    private Task OnSearchCriteriaClicked()
+    {
+        _displayDropdown = !_displayDropdown;
+        return Task.CompletedTask;
+    }
+
+    private Task OnSearchCriteriaFilterChanged(SearchCriteriaFilters filter)
+    {
+        SearchCriteriaFilter = filter;
+        _displayDropdown = false;
+        if (FilterValue != null)
+        {
+            return OnFilter(FilterValue);
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task OnSearchCriteriaFilterBlur()
+    {
+        await Task.Delay(200);
+        _displayDropdown = false;
+    }
+    public bool IsFieldShow(TItem item)
+    {
+        if(_valueShowHideExpression is null)
+        {
+            return true;
+        }        
+         return (bool)_getShowHideValue(item);   
+    }
+}

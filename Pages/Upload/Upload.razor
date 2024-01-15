@@ -1,0 +1,107 @@
+@page "/Upload/Upload"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Services;
+@using BlazorDownloadFile;
+@inject ILogger<ProductionUpload> Logger
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@using System;
+@using System.Data;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Reflection;
+@using System.Threading.Tasks;
+<style>
+    tbody tr td:last-child {
+    text-align: left !important;
+}
+</style>
+<ContentWrapper Header="Upload" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    <AuthorizeView Policy="UploadAccess">
+        <Authorized Context="Auth">
+            <PageHeading Title = "Upload"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="card">
+                    <div class="row">
+                        <div class="col-md-4 pb-1">
+                            <label class="form-label mb-0">Upload Template Type</label>
+                            <select class="form-control" style="min-width: 100px !important;" @onchange="ChangeUploadTemplateType">
+                                @if (_uploadTemplate != null)
+                                {
+                                    @foreach (var item in _uploadTemplate)
+                                    {
+                                        <option Value="@item.UploadTemplateName"> @item.UploadTemplateName </option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="export-container">
+                        <button type="button" role="button" class="my-2 btn btn-gradient-blue btn-addon btn-sm"
+                            @onclick="@btnDownload">
+                            <i class="fa fa-file-excel mr-1"></i>Download Excel to upload
+                        </button>
+                        <LoadingScreen Enabled="@displayFileLoading">
+                            <div class="file-container my-1">
+                                <InputFile OnChange="OnChooseFile" />
+                            </div>
+                            <div>
+                                <span class="text-primary">@fileName</span>
+                            </div>
+                        </LoadingScreen>
+                        <div style="margin-top: 5px;">
+                            <input type="checkbox" class="ng-pristine ng-untouched ng-valid" disabled="@disableUploadBtn" @onchange="eventArgs => CheckboxClicked((bool)eventArgs.Value)">
+                            <label>Delete existing accounts &amp; Upload</label>
+                        </div>
+                        
+                        <div class="">
+                            <!-- <input class="btn btn-success btn-sm m-t-10" type="button" disabled="@disableUploadBtn" value="Upload"
+                                @onclick="UploadTemplate"> -->
+                                @if(UploadType == "API" || UploadType == "SP" )
+                                {
+                                    <button type="button" disabled="@disableUploadBtn" @onclick="UploadByAPI"
+                                    class="mt-1 btn btn-sm btn-success"><i class="fa fa-upload mr-1"></i>
+                                    UPLOAD
+                                    </button>
+                                }
+                                 @if(UploadType == "LINQ")
+                                {
+                                    <button type="button" disabled="@disableUploadBtn" @onclick="UploadByLinq"
+                                    class="mt-1 btn btn-sm btn-primary"><i class="fa fa-upload mr-1"></i>
+                                    UPLOAD
+                                    </button>
+                                }
+                                
+                        </div>
+                    </div>
+                </section>
+                <div>
+                    <LoadingScreen Enabled="@displayFileUploading">
+                        <div hidden="@(ShowGridUploadError)">
+                            <Grid TItem="ErrorDetail" @bind-SortColumn="sortColumn" Items="@_uploadedData" AllowFiltering="true"
+                                AllowSorting="true" PageSize="10" MinimumHeight="0vh">
+                                <GridColumns>
+                                    <GridColumn TItem="ErrorDetail" Field="@nameof(ErrorDetail.Error)" Title="Error"
+                                        ValueExpression="@(Item => Item.Error)" AllowFiltering="true" AllowSorting="true">
+                                    </GridColumn>
+                                    <GridColumn TItem="ErrorDetail" Field="@nameof(ErrorDetail.RowNumber)" Title="Row Number"
+                                        ValueExpression="@(Item => Item.RowNumber)" AllowFiltering="true" AllowSorting="true">
+                                    </GridColumn>
+                                    <GridColumn TItem="ErrorDetail" Field="@nameof(ErrorDetail.Description)" Title="Description"
+                                        ValueExpression="@(Item => Item.Description)" AllowFiltering="true" AllowSorting="true">
+                                    </GridColumn>
+                                </GridColumns>
+                            </Grid>
+                        </div>
+                    </LoadingScreen>
+                </div>
+            </ProgressScreen>
+        </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView>
+</ContentWrapper>
+

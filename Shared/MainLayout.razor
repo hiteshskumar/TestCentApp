@@ -1,0 +1,324 @@
+﻿@using System
+@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Services;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Controls;
+@using ChargesWFM.UI.Components.Controls.Toasts;
+@inject IProjectGroupSelectionService ProjectGroupSelectionService
+@inject IHotKeyService HotKeyService
+
+<div class="sidebar sidebar-hide-to-small sidebar-shrink sidebar-gestures">
+    <NavMenu />
+</div>
+<div class="header">
+    <div class="container-fluid py-1">
+
+        <section class="d-flex" style="width:100%;">
+        <div class="logo-sec-c">
+                <div class="logo"><a href="index.html">
+                            <span>Centaur WFM</span>
+                            <strong class="slide-menu-logo">WFM</strong>
+                        </a>
+                    </div>
+            </div>
+        <div class="row mx-0 nav-b-c">
+            <div class="col-6">
+                <div class="row">
+                    <div id="hamburger-menu-icon">
+                        <span class="line"></span>
+                        <span class="line"></span>
+                        <span class="line"></span>
+                    </div>
+                    <div>
+                        <div class="">
+                            <ProjectGroupSelection></ProjectGroupSelection>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 text-right pe-0">
+               <div class="btn-group align-items-center info-sec-c">
+                    
+                    @* <div class="d-flex px-2">
+                    <i class="fa fa-search" aria-hidden="true"></i>
+                    </div>
+
+                    <div class="d-flex px-2">
+                    <i class="fa fa-arrows-alt" aria-hidden="true"></i>
+                    </div>
+
+                    <div class="d-flex px-2">
+                    <i class="fa fa-bell-o" aria-hidden="true"></i>
+                    </div>
+                    
+                    <div class="d-flex px-2">
+                     <i class="fa fa-cog" aria-hidden="true"></i>
+                    </div> *@
+                       
+
+                    
+                    <div class="d-flex px-2">
+                        <span><i class="fa fa-user-o" aria-hidden="true"></i>&nbsp; <b>@userName</b></span>
+                    </div>
+                    <div class="d-flex px-2">
+                            <i class="fa fa-2x fa-book pointer font-16" title="Knowledge Base" @onclick="@OnKnowledgeBaseClick"></i>
+                           
+                    </div>
+                    <div class="d-flex px-2">
+                            <i class="fa fa-info fa-lg" title="Upload Summary" @onclick="@OnUploadSummaryClick"></i>
+                           
+                    </div>                    
+                    <div class="d-flex px-2">
+                          <span><i class="fa-solid fa-power-off" title="Logout"></i></span>
+                    </div>
+                    
+                    
+                     @* <button type="button" class="btn user-profile-b-c dropdown-toggle btn-sm pl-2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fa fa-user-o" aria-hidden="true"></i>
+                    </button> *@
+                    @* <div class="dropdown-menu">
+                         <a class="dropdown-item" href="#"  style="font-size: 12px;"><i class="fa fa-user-o" aria-hidden="true"></i>
+                                                                <span>@userName</span></a> 
+                        <a class="dropdown-item" href="#"  style="font-size: 12px;"> <i class="fa-regular fa-envelope"></i>
+                                                                <span> Inbox</span></a>
+                        <a class="dropdown-item" href="#"  style="font-size: 12px;"> <i class="fa-solid fa-gear"></i>
+                                                                <span>Setting</span></a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#"  style="font-size: 12px;"><i class="fa-solid fa-power-off"></i>  
+                                                                <span>Logout</span></a>
+                    </div> *@
+                </div>
+                    
+                
+            </div> 
+            
+            <!-- <div class="col-1 text-left" style="margin-top: 5px; margin-left: -20px;">
+                            <i class="fa fa-2x fa-book pointer font-16"  @onclick="@OnKnowledgeBaseClick"></i>
+                           
+                    </div> -->
+                    
+                             
+        </div>
+        </section>
+    </div>
+</div>
+<div class="content-wrap">
+    <div class="main">        
+        <div class="container-fluid px-1">
+            <!-- /# row -->
+            <section id="main-content">
+                <article class="content px-1">
+                    @Body
+                    <ToastContainer></ToastContainer>
+                </article>
+            </section>
+        </div>
+    </div>
+</div>
+@if (displayKBFrame)
+{
+    <div class="position-fixed bottom-0 end-0 bg-body shadow-lg border rounded-3 m-3" style="height: 90%; width: 35%">
+        <iframe src="@htmlContent"
+                frameborder="10" style="width: 100%; height: 100%;">
+        </iframe>
+    </div>
+}
+@if (uploadsummary)
+{
+    <div class="position-fixed bottom-0 end-0 bg-body shadow-lg border rounded-3 m-3" style="height: 25%; width: 25%">
+        <h6 align="center">Uploaded Summary</h6>
+                <Grid TItem="WorkallocationAccountSummary"  Items="@_uploadsummary" AllowFiltering="false"
+                        AllowSorting="true" DisplayFooter="false" AllowExport="false" MinimumHeight="0vh">
+                        <GridColumns>
+                            <GridColumn TItem="WorkallocationAccountSummary" Field="@nameof(WorkallocationAccountSummary.Assignedaccounts)" Title="Assigned Accounts"
+                                ValueExpression="@(Item => Item.Assignedaccounts)" AllowFiltering="false" AllowSorting="true">
+                            </GridColumn>
+
+                            <GridColumn TItem="WorkallocationAccountSummary" Field="@nameof(WorkallocationAccountSummary.Completed)" Title="Completed"
+                                ValueExpression="@(Item => Item.Completed)" AllowFiltering="false"
+                                AllowSorting="true">
+                            </GridColumn>
+                        </GridColumns>
+                    </Grid>
+    </div>
+}
+@code
+{
+    private string MenuToggleCssClass = "hamburger sidebar-toggle";
+    private AuthenticatedUser? user;
+    [Inject]
+    HttpClient Http { get; set; }
+    [Inject]
+    AuthenticationStateProvider AuthProvider { get; set; }
+    [Inject]
+    ILocalStorageService LocalStorageService { get; set; }
+    [Inject]
+    IToasterService ToasterService { get; set; }
+
+    private ProcessClients[]? _processClients;
+    private NexgenProjectGroups[]? _nexgenProjectGroups = Array.Empty<NexgenProjectGroups>();
+        
+    private int ProcessID {get;set;}
+    private int ClientID {get;set;}
+    private int DepartmentID {get;set;}
+    private int EmployeeID {get;set;}
+    private int ProjectGroupID {get;set;}
+    private ProcessClients? selectedProcessClient;
+    private NexgenProjectGroups? selectedProjectGroups;
+     public string? screenName { get; set; }
+     public string? schemaName = string.Empty;
+    private int projectGroupID = 0;
+    private string userName = string.Empty;
+    private string? ProjectGroupName { get; set; }
+    private int AssignedAccount{get;set;}
+    private int CompletedAccount{get;set;}
+    private WorkallocationAccountSummary[]? _uploadsummary = Array.Empty<WorkallocationAccountSummary>();
+    private void toggleMenu()
+    {
+        MenuToggleCssClass = MenuToggleCssClass=="hamburger sidebar-toggle"?"hamburger sidebar-toggle is-active":"hamburger sidebar-toggle";
+        JSRuntime.InvokeVoidAsync("toggleSideBar");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+            user = await LocalStorageService.GetAsync<AuthenticatedUser>();
+            //var user = await LocalStorageService.GetAsync<AuthenticatedUser>();
+            if(user != null)
+            {
+                EmployeeID = user.EmployeeId;
+            }
+            //await GetProcessClients();
+             
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        if(projectGroup != null)
+        {
+            projectGroupID = projectGroup.ProjectGroupID;
+            schemaName = projectGroup.SchemaName;
+            userName= user.SigninName;
+        }
+
+    }
+    private string htmlContent = "", uri = "";
+    private bool displayKBFrame;
+    private bool uploadsummary;
+
+
+    private async Task OnUploadSummaryClick()
+    {
+        try
+        {
+            await this.UploadsummaryDeatils();
+            uploadsummary = !uploadsummary;
+        }
+        catch (Exception ex)
+        {
+            
+            ToasterService.AddDanger("Header", "Error in Load KB Details");
+        }
+    }
+
+     public async Task UploadsummaryDeatils()
+        {
+            try
+            {
+                //DisplayLoading(true, "Loading");
+                var EmployeeID = user.EmployeeId;
+                var AuthState = (AuthStateProvider)AuthProvider;
+                string apiURL = $"WorkAllocation/GetWorkAllocationsSummary/ProjectGroupID/" + projectGroupID + "/EmployeeID/" + EmployeeID + "/SchemaName/" + schemaName;
+                _uploadsummary = await ApiHelper.GetUsingMsgPackAsync<WorkallocationAccountSummary[]>(apiURL, Http, AuthState.Token);
+                if (_uploadsummary.Count()>0)    
+                {
+                    AssignedAccount=_uploadsummary[0].Assignedaccounts;
+                    CompletedAccount=_uploadsummary[0].Completed;
+                }
+                await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+                //DisplayLoading(false);
+            }
+            catch (Exception ex)
+            {
+                //Toaster.Add("Error in upload summary", MatToastType.Danger, "Work Allocation");
+                //DisplayLoading(false);
+            }
+        }
+    private async Task GetProcessClients()
+    {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            _processClients = await
+            ApiHelper.GetUsingMsgPackAsync<ProcessClients[]>("/NexgenProjectGroup/GetProcessClients", Http,
+            AuthState.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+    }
+
+    private async Task GetProjectGroups()
+    {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var pro = await this.LocalStorageService.GetAsync<ProcessClients>();
+            _nexgenProjectGroups = await
+            ApiHelper.GetUsingMsgPackAsync<NexgenProjectGroups[]>("/NexgenProjectGroup/GetProjectGroups/ProcessID/" + pro.ProcessID + "/ClientID/" + pro.ClientID + "/DepartmentID/" + pro.DepartmentID + "/EmployeeID/" + this.EmployeeID, Http,
+            AuthState.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+            StateHasChanged();
+    }
+
+    protected Task ProcessClientSelected(ProcessClients processClient)
+    {
+        if (processClient == null)
+        {
+            return Task.CompletedTask;
+        }
+        selectedProcessClient = processClient;
+        this.LocalStorageService.SetAsync<ProcessClients>(processClient);
+        _ = GetProjectGroups();
+        return Task.CompletedTask;
+    }
+
+        string FormatProcessClient(ProcessClients processClient) {
+        if (processClient == null) {
+            return string.Empty;
+        }
+        return $"{processClient.Client} ({processClient.Process})";
+        }
+
+        protected Task ProjectGroupSelected(NexgenProjectGroups projectgroups)
+        {
+        if (projectgroups == null)
+        {
+            return Task.CompletedTask;
+        }
+        selectedProjectGroups = projectgroups;
+       
+        return Task.CompletedTask;
+        }
+
+        string FormatProjectGroups(NexgenProjectGroups projectgroups) {
+        if (projectgroups == null) {
+            return string.Empty;
+        }
+        return $"{projectgroups.ProjectGroupName} ({projectgroups.ProjectGroupCode})";
+        }
+    [JSInvokable]
+    public async Task OnKeyDownEvent(bool CtrlKey, bool AltKey, bool ShiftKey, string Key)
+    {
+        HotKeyService.OnKeyDown(CtrlKey, AltKey, ShiftKey, Key);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        
+         base.OnAfterRender(firstRender);
+         // await JSRuntime.InvokeVoidAsync("saveAsFile");
+         if (firstRender)
+        {
+            var dotNetObjectRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("OnHotKey_Init", dotNetObjectRef);
+        }
+    }
+    
+    protected  async Task TestAlert()
+    {
+         //await JSRuntime.InvokeVoidAsync("saveAsFile");
+
+    }
+}

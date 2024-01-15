@@ -1,0 +1,222 @@
+@page "/productivitydashboard"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Controls;
+@using ChargesWFM.UI.Services;
+@inherits LayoutComponentBase
+<style>
+    tbody tr td:last-child {
+        text-align: left !important;
+    }
+</style>
+
+<ContentWrapper Header="Productivity Dashboard" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    <AuthorizeView Policy="ProductivityDashboardAccess">
+        <Authorized Context="Auth">
+            <PageHeading Title="Productivity Dashboard"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="card">
+                    <div class="row mt-2">
+                        <div class="col-3 pe-0">
+                            <label for="ddlbg">Billable Group</label>
+                            <div>
+                                <MultiSelectNew Id="ddlBillableGroup" Items="dsBillableGroup"
+                                    TextField="((item)=>item.BillableGroup)" ValueField="((item)=>item.BillableGroupId)"
+                                    SelectedValues="selectedBillableGroup" ValueChanged="((e)=> { selectedBillableGroup=e; })"
+                                    Label="Billable Group"></MultiSelectNew>
+                            </div>
+                        </div>
+                        <div class="col-3 pe-0">
+                            <label for="ddllocation">Location</label>
+                            <div>
+                                <MultiSelectNew Id="ddllocation" Items="dsLocation"
+                                    TextField="((item)=>item.Location)" ValueField="((item)=>item.Location)"
+                                    SelectedValues="selectedLocation" ValueChanged="((e)=> { selectedLocation=e; })"
+                                    Label="Location"></MultiSelectNew>
+                            </div>
+                        </div>
+                        <div class="col-3 pe-0">
+                            <label for="ddlRE">Reporting Authority</label>
+                            <div>
+                                <MultiSelectNew Id="ddRReport" Items="dsReportingAuthority"
+                                    TextField="((item)=>item.ReportingAuthorityName)" ValueField="((item)=>item.ReportingAuthorityID)"
+                                    SelectedValues="selectedReportingAuthority" ValueChanged="((e)=> { selectedReportingAuthority=e; })"
+                                    Label="RE"></MultiSelectNew>
+                            </div>
+                        </div>
+                        <div class="col-3 pe-0" hidden = "@(isHideClientDisposition)">
+                            <label for="ddlCD">Client Disposition</label>
+                            <div>
+                                <MultiSelectNew Id="ddlCD" Items="dsCD"
+                                    TextField="((item)=>item.MasterValue)" ValueField="((item)=>item.MasterValue)"
+                                    SelectedValues="selectedCD" ValueChanged="((e)=> { selectedCD=e; })"
+                                    Label="ClientDisposition"></MultiSelectNew>
+                            </div>
+                        </div>
+                        <div class="col-3 pe-0">
+                            <button type="button" class="btn btn-success btn-sm m-t-20"
+                            @onclick="OnGetValueClicked"><i class="fa fa-long-arrow-right" aria-hidden="true"></i> GetValues</button>
+                        </div>
+                    </div>
+                    @* <div>
+                        <MatRadioGroup TValue="string" Value="@selectedLevel" ValueChanged="@((string productionLevel) => OnGetUniqueLevelWise(productionLevel))">
+                            @if(disabledPL)
+                            {
+                                <MatRadioButton class="ps-0" Label="PL" Value="@("PL")" ></MatRadioButton>
+                            }
+                            @if(disabledCL)
+                            {
+                                <MatRadioButton Label="CL" Value="@("CL")" ></MatRadioButton>
+                            }
+                            @if(disabledLL)
+                            {
+                                <MatRadioButton Label="LL" Value="@("LL")" ></MatRadioButton>
+                            }
+                        </MatRadioGroup>
+                    </div> *@
+                    <div hidden="@(isHide)">
+                        <MatTabGroup ActiveIndex="@tabIndex" ActiveIndexChanged="@OnActiveIndexChanged"> 
+                    <MatTab Label="Employee Dashboard">
+                    <Grid TItem="GetHourlyProductivityDashboardResult" Items="_hourlyDashboard"  @bind-SortColumn="sortColumn" AllowFiltering="true" AllowSorting="true" MinimumHeight="75vh">
+                        <GridColumns>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="EmployeeName" ValueExpression="@(Item => Item.WorkedBy)" Field="@nameof(GetHourlyProductivityDashboardResult.WorkedBy)"  AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="TotalCount" ValueExpression="@(Item => Item.TotalCount)" Field="@nameof(GetHourlyProductivityDashboardResult.TotalCount)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="6AM-7AM" ValueExpression="@(Item => Item.st0)" Field="@nameof(GetHourlyProductivityDashboardResult.st0)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="7AM-8AM" ValueExpression="@(Item => Item.st1)" Field="@nameof(GetHourlyProductivityDashboardResult.st1)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="8AM-9AM" ValueExpression="@(Item => Item.st2)" Field="@nameof(GetHourlyProductivityDashboardResult.st2)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="9AM-10AM" ValueExpression="@(Item => Item.st3)" Field="@nameof(GetHourlyProductivityDashboardResult.st3)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="10AM-11AM" ValueExpression="@(Item => Item.st4)" Field="@nameof(GetHourlyProductivityDashboardResult.st4)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="11AM-12PM" ValueExpression="@(Item => Item.st5)" Field="@nameof(GetHourlyProductivityDashboardResult.st5)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="12PM-1PM" ValueExpression="@(Item => Item.st6)" Field="@nameof(GetHourlyProductivityDashboardResult.st6)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="1PM-2PM" ValueExpression="@(Item => Item.st7)" Field="@nameof(GetHourlyProductivityDashboardResult.st7)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="2PM-3PM" ValueExpression="@(Item => Item.st8)" Field="@nameof(GetHourlyProductivityDashboardResult.st8)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="3PM-4PM" ValueExpression="@(Item => Item.st9)" Field="@nameof(GetHourlyProductivityDashboardResult.st9)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="4PM-5PM" ValueExpression="@(Item => Item.st10)" Field="@nameof(GetHourlyProductivityDashboardResult.st10)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="5PM-6PM" ValueExpression="@(Item => Item.st11)" Field="@nameof(GetHourlyProductivityDashboardResult.st11)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="6PM-7PM" ValueExpression="@(Item => Item.st12)" Field="@nameof(GetHourlyProductivityDashboardResult.st12)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="7PM-8PM" ValueExpression="@(Item => Item.st13)" Field="@nameof(GetHourlyProductivityDashboardResult.st13)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="8PM-9PM" ValueExpression="@(Item => Item.st14)" Field="@nameof(GetHourlyProductivityDashboardResult.st14)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="9PM-10PM" ValueExpression="@(Item => Item.st15)" Field="@nameof(GetHourlyProductivityDashboardResult.st15)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="10PM-11PM" ValueExpression="@(Item => Item.st16)"Field="@nameof(GetHourlyProductivityDashboardResult.st16)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="11PM-12AM" ValueExpression="@(Item => Item.st17)" Field="@nameof(GetHourlyProductivityDashboardResult.st17)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="12AM-1AM" ValueExpression="@(Item => Item.st18)"Field="@nameof(GetHourlyProductivityDashboardResult.st18)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="1AM-2AM" ValueExpression="@(Item => Item.st19)" Field="@nameof(GetHourlyProductivityDashboardResult.st19)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="2AM-3AM" ValueExpression="@(Item => Item.st20)" Field="@nameof(GetHourlyProductivityDashboardResult.st20)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="3AM-4AM" ValueExpression="@(Item => Item.st21)" Field="@nameof(GetHourlyProductivityDashboardResult.st21)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="4AM-5AM" ValueExpression="@(Item => Item.st22)" Field="@nameof(GetHourlyProductivityDashboardResult.st22)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardResult" Title="5AM-6AM" ValueExpression="@(Item => Item.st23)" Field="@nameof(GetHourlyProductivityDashboardResult.st23)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                        </GridColumns>
+                    </Grid>
+                    </MatTab>
+                    <MatTab Label="SubTask Dashboard">
+                        <Grid TItem="GetHourlyProductivityDashboardWithSubTaskResult" Items="_subTaskHourlyDashboard" @bind-SortColumn="sortColumn" AllowFiltering="true" AllowSorting="true" MinimumHeight="75vh">
+                        <GridColumns>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="Employee Name" ValueExpression="@(Item => Item.WorkedBy)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.WorkedBy)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="Task" ValueExpression="@(Item => Item.Task)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.Task)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="Sub Task" ValueExpression="@(Item => Item.SubTask)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.SubTask)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="Total Count" ValueExpression="@(Item => Item.TotalCount)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.TotalCount)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="6AM-7AM" ValueExpression="@(Item => Item.st0)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st0)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="7AM-8AM" ValueExpression="@(Item => Item.st1)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st1)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="8AM-9AM" ValueExpression="@(Item => Item.st2)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st2)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="9AM-10AM" ValueExpression="@(Item => Item.st3)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st3)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="10AM-11AM" ValueExpression="@(Item => Item.st4)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st4)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="11AM-12PM" ValueExpression="@(Item => Item.st5)"Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st5)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="12PM-1PM" ValueExpression="@(Item => Item.st6)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st6)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="1PM-2PM" ValueExpression="@(Item => Item.st7)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st7)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="2PM-3PM" ValueExpression="@(Item => Item.st8)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st8)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="3PM-4PM" ValueExpression="@(Item => Item.st9)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st9)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="4PM-5PM" ValueExpression="@(Item => Item.st10)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st10)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="5PM-6PM" ValueExpression="@(Item => Item.st11)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st11)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="6PM-7PM" ValueExpression="@(Item => Item.st12)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st12)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="7PM-8PM" ValueExpression="@(Item => Item.st13)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st13)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="8PM-9PM" ValueExpression="@(Item => Item.st14)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st14)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="9PM-10PM" ValueExpression="@(Item => Item.st15)"  Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st15)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="10PM-11PM" ValueExpression="@(Item => Item.st16)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st16)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="11PM-12AM" ValueExpression="@(Item => Item.st17)"  Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st17)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="12AM-1AM" ValueExpression="@(Item => Item.st18)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st18)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="1AM-2AM" ValueExpression="@(Item => Item.st19)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st19)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="2AM-3AM" ValueExpression="@(Item => Item.st20)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st20)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="3AM-4AM" ValueExpression="@(Item => Item.st21)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st21)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="4AM-5AM" ValueExpression="@(Item => Item.st22)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st22)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyProductivityDashboardWithSubTaskResult" Title="5AM-6AM" ValueExpression="@(Item => Item.st23)" Field="@nameof(GetHourlyProductivityDashboardWithSubTaskResult.st23)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                        </GridColumns>
+                    </Grid>
+                    </MatTab>
+                    <MatTab Label="Efficiency Dashboard">
+                        <Grid TItem="GetHourlyEfficiencyDashboardResult" Items="_EfficiencyDashboard" @bind-SortColumn="sortColumn" AllowFiltering="true" AllowSorting="true" MinimumHeight="75vh">
+                        <GridColumns>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="Employee Name" ValueExpression="@(Item => Item.WorkedBy)" Field="@nameof(GetHourlyEfficiencyDashboardResult.WorkedBy)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="AchievedPercentageWithFullTarget" ValueExpression="@(Item => Item.AchievedPercentageWithFullTarget)" Field="@nameof(GetHourlyEfficiencyDashboardResult.AchievedPercentageWithFullTarget)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="AchievedPercentageWithCategoryTarget" ValueExpression="@(Item => Item.AchievedPercentageWithCategoryTarget)" Field="@nameof(GetHourlyEfficiencyDashboardResult.AchievedPercentageWithCategoryTarget)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="Total Count" ValueExpression="@(Item => Item.TotalCount)" Field="@nameof(GetHourlyEfficiencyDashboardResult.TotalCount)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="6AM-7AM" ValueExpression="@(Item => Item.st0)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st0)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="7AM-8AM" ValueExpression="@(Item => Item.st1)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st1)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="8AM-9AM" ValueExpression="@(Item => Item.st2)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st2)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="9AM-10AM" ValueExpression="@(Item => Item.st3)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st3)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="10AM-11AM" ValueExpression="@(Item => Item.st4)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st4)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="11AM-12PM" ValueExpression="@(Item => Item.st5)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st5)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="12PM-1PM" ValueExpression="@(Item => Item.st6)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st6)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="1PM-2PM" ValueExpression="@(Item => Item.st7)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st7)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="2PM-3PM" ValueExpression="@(Item => Item.st8)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st8)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="3PM-4PM" ValueExpression="@(Item => Item.st9)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st9)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="4PM-5PM" ValueExpression="@(Item => Item.st10)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st10)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="5PM-6PM" ValueExpression="@(Item => Item.st11)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st11)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="6PM-7PM" ValueExpression="@(Item => Item.st12)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st12)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="7PM-8PM" ValueExpression="@(Item => Item.st13)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st13)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="8PM-9PM" ValueExpression="@(Item => Item.st14)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st14)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="9PM-10PM" ValueExpression="@(Item => Item.st15)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st15)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="10PM-11PM" ValueExpression="@(Item => Item.st16)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st16)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="11PM-12AM" ValueExpression="@(Item => Item.st17)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st17)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="12AM-1AM" ValueExpression="@(Item => Item.st18)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st18)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="1AM-2AM" ValueExpression="@(Item => Item.st19)" Field="@nameof(GetHourlyEfficiencyDashboardResult.st19)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="2AM-3AM" ValueExpression="@(Item => Item.st20)"  Field="@nameof(GetHourlyEfficiencyDashboardResult.st20)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="3AM-4AM" ValueExpression="@(Item => Item.st21)"  Field="@nameof(GetHourlyEfficiencyDashboardResult.st21)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="4AM-5AM" ValueExpression="@(Item => Item.st22)"  Field="@nameof(GetHourlyEfficiencyDashboardResult.st22)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyEfficiencyDashboardResult" Title="5AM-6AM" ValueExpression="@(Item => Item.st23)"  Field="@nameof(GetHourlyEfficiencyDashboardResult.st23)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                        </GridColumns>
+                    </Grid>
+                    </MatTab>
+                    <MatTab Label="Hourly Account Sum DashBoard" hidden = "@(isAccountCountHide)">
+                        <Grid TItem="GetHourlyAccountCountDashboardResult" Items="_HourlyAccountCountDashboard" @bind-SortColumn="sortColumn" AllowFiltering="true" AllowSorting="true" MinimumHeight="75vh">
+                        <GridColumns>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="Employee Name" ValueExpression="@(Item => Item.WorkedBy)" Field="@nameof(GetHourlyAccountCountDashboardResult.WorkedBy)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="Total" ValueExpression="@(Item => Item.Total)" Field="@nameof(GetHourlyAccountCountDashboardResult.Total)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="6AM-7AM" ValueExpression="@(Item => Item.stb0)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb0)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="7AM-8AM" ValueExpression="@(Item => Item.stb1)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb1)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="8AM-9AM" ValueExpression="@(Item => Item.stb2)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb2)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="9AM-10AM" ValueExpression="@(Item => Item.stb3)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb3)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="10AM-11AM" ValueExpression="@(Item => Item.stb4)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb4)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="11AM-12PM" ValueExpression="@(Item => Item.stb5)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb5)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="12PM-1PM" ValueExpression="@(Item => Item.stb6)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb6)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="1PM-2PM" ValueExpression="@(Item => Item.stb7)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb7)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="2PM-3PM" ValueExpression="@(Item => Item.stb8)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb8)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="3PM-4PM" ValueExpression="@(Item => Item.stb9)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb9)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="4PM-5PM" ValueExpression="@(Item => Item.stb10)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb10)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="5PM-6PM" ValueExpression="@(Item => Item.stb11)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb11)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="6PM-7PM" ValueExpression="@(Item => Item.stb12)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb12)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="7PM-8PM" ValueExpression="@(Item => Item.stb13)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb13)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="8PM-9PM" ValueExpression="@(Item => Item.stb14)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb14)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="9PM-10PM" ValueExpression="@(Item => Item.stb15)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb15)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="10PM-11PM" ValueExpression="@(Item => Item.stb16)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb16)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="11PM-12AM" ValueExpression="@(Item => Item.stb17)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb17)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="12AM-1AM" ValueExpression="@(Item => Item.stb18)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb18)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="1AM-2AM" ValueExpression="@(Item => Item.stb19)" Field="@nameof(GetHourlyAccountCountDashboardResult.stb19)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="2AM-3AM" ValueExpression="@(Item => Item.stb20)"  Field="@nameof(GetHourlyAccountCountDashboardResult.stb20)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="3AM-4AM" ValueExpression="@(Item => Item.stb21)"  Field="@nameof(GetHourlyAccountCountDashboardResult.stb21)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="4AM-5AM" ValueExpression="@(Item => Item.stb22)"  Field="@nameof(GetHourlyAccountCountDashboardResult.stb22)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                <GridColumn TItem="GetHourlyAccountCountDashboardResult" Title="5AM-6AM" ValueExpression="@(Item => Item.stb23)"  Field="@nameof(GetHourlyAccountCountDashboardResult.stb23)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                        </GridColumns>
+                    </Grid>
+                    </MatTab>
+                </MatTabGroup>
+                    </div>
+                </section>
+            </ProgressScreen>
+        </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView>
+</ContentWrapper>

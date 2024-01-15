@@ -1,0 +1,177 @@
+@using ChargesWFM.UI.Models
+@using ChargesWFM.UI.Services
+@inject ILocalStorageService LocalStorageService
+@inject IProjectGroupSelectionService ProjectGroupSelectionService
+@implements IDisposable
+
+<section class="content-sec-c api-data-upload-c">
+    @if (displayChild)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <MessageScreen Message=@message />
+    }
+</section>
+
+@code {
+    [Parameter]
+    public bool EnableBreadcrumb { get; set; }
+
+    [Parameter]
+    public string Header { get; set; }
+
+    [Parameter]
+    public PageAccessLevel Level { get; set; } = PageAccessLevel.Placement;
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback Refresh { get; set; }
+
+    [Parameter]
+    public EventCallback<ClientSubClient> ProcessClientChanged { get; set; }
+    
+    [Parameter]
+    public EventCallback<NexgenProjectGroups> ProjectGroupChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ClientLoginChanged { get; set; }
+    [Parameter]
+    public bool IsClientVisible { get; set; }
+    [Parameter]
+    public string PageIcon { get; set; } = "fa fa-cubes fa-lg";
+
+    private bool displayChild = true;
+    private string message = string.Empty;
+    private const string LOCAL_STORAGE_KEY = "ClientLogin";
+
+    [Inject]
+    IToasterService? ToasterService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProjectGroupSelectionService.ProcessClientChanged += ProcessClientChangedHandler;
+        ProjectGroupSelectionService.ProjectGroupChanged += ProjectGroupChangedHandler;
+        //ProjectGroupSelectionService.ClientLoginChanged += ClientLoginChangedHandler;
+        //ProjectGroupSelectionService.VisibleClient(IsClientVisible);
+        var processClient = await LocalStorageService.GetAsync<ProcessClients>();
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        //var placement = await LocalStorageService.GetAsync<Placement>();
+        var clientLogin = await LocalStorageService.GetAsync<string>(LOCAL_STORAGE_KEY);
+        ChangeProcessClient(processClient);
+        ChangeProjectGroup(projectGroup);
+        //ChangeClientLogin(clientLogin);
+        //VisibleClients();
+    }
+
+    private void ProcessClientChangedHandler(object _, ProcessClientChangedEventArgs args)
+    {
+        ChangeProcessClient(args.ProcessClient);
+    }
+
+    private void ChangeProcessClient(ProcessClients processClient)
+    {
+        if (Level > PageAccessLevel.ProcessClient)
+        {
+            return;
+        }
+        if (processClient == null)
+        {
+            //ToasterService.AddDanger("Process > Client", "Please select a process client");
+            //message = "";
+            displayChild = false;
+        }
+        else
+        {
+            if (Level >= PageAccessLevel.ProcessClient)
+            {
+                message = string.Empty;
+                displayChild = true;
+            }
+            else
+            {
+                //ToasterService.AddDanger("Project Group", "Please select a project group");
+                //ToasterService.AddDanger("Process > Client", "Please select a process client");
+                message = "";
+                displayChild = false;
+            }
+        }
+        StateHasChanged();
+    }
+
+    public Task VisibleClients()
+    {
+        ProjectGroupSelectionService.VisibleClient(IsClientVisible);
+        return Task.CompletedTask;
+    }
+
+    private void ProjectGroupChangedHandler(object _, ProjectGroupChangedEventArgs args)
+    {
+        ChangeProjectGroup(args.ProjectGroup);
+    }
+
+    private void ChangeProjectGroup(NexgenProjectGroups projectGroup)
+    {
+        if (Level > PageAccessLevel.ProjectGroup)
+        {
+            return;
+        }
+        @* Level = PageAccessLevel.ProjectGroup; *@
+        if (projectGroup == null)
+        {
+            //ToasterService.AddDanger("Project Group", "Please select a project group");
+            displayChild = false;
+        }
+        else
+        {
+            if (Level >= PageAccessLevel.ProjectGroup)
+            {
+                message = string.Empty;
+                displayChild = true;
+                ProjectGroupChanged.InvokeAsync(projectGroup);
+            }
+            else
+            {
+                message = "Please select a placement";
+                displayChild = false;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void ClientLoginChangedHandler(object _, ClientLoginChangedEventArgs args)
+    {
+        ChangeClientLogin(args.ClientLogin);
+    }
+
+    private void ChangeClientLogin(string master)
+    {
+        if (string.IsNullOrEmpty(master))
+        {
+            ClientLoginChanged.InvokeAsync(null);
+        }
+        else
+        {
+            ClientLoginChanged.InvokeAsync(master);
+        }
+        StateHasChanged();
+    }
+
+    public enum PageAccessLevel
+    {
+        Placement = 0,
+        ProjectGroup = 1,
+        ProcessClient = 2,
+        None = 3,
+    }
+
+    public void Dispose()
+    {
+        ProjectGroupSelectionService.ProcessClientChanged -= ProcessClientChangedHandler;
+        ProjectGroupSelectionService.ProjectGroupChanged -= ProjectGroupChangedHandler;
+        //ProjectGroupSelectionService.ClientLoginChanged -= ClientLoginChangedHandler;
+    }
+}

@@ -1,0 +1,31 @@
+<div>
+    @if (Enabled)
+    {
+        <div id="progress-screen">
+            <div class="center-div">
+                <span class="progress-screen-text">@DisplayText</span>
+                <div>
+                    <div class="spinner text-primary"></div>
+                    <div class="spinner text-secondary"></div>
+                    <div class="spinner text-success"></div>
+                    <div class="spinner text-danger"></div>
+                    <div class="spinner text-info"></div>
+                    <div class="spinner text-warning"></div>
+                </div>
+            </div>
+        </div>
+    }
+    @ChildContent
+</div>
+
+@code 
+{
+    [Parameter]
+    public bool Enabled { get; set; }
+
+    [Parameter]
+    public string DisplayText { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+}

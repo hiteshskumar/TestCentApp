@@ -1,0 +1,70 @@
+{
+  "version": 2,
+  "dgSpecHash": "r6h8+MSwu0CMWlbZcUZr178qqzHKMNmsKc96mmBx/+YFc19kZyQVCl2dIvvCrm2EG6Rr5HfxPbPsUmgNm021tg==",
+  "success": false,
+  "projectFilePath": "C:\\Users\\hitesh.kumar\\Source\\Repos\\ChargesWFM.UI\\ChargesWFM.UI.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\blazored.localstorage\\4.4.0\\blazored.localstorage.4.4.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\documentformat.openxml\\3.0.1\\documentformat.openxml.3.0.1.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\documentformat.openxml.framework\\3.0.1\\documentformat.openxml.framework.3.0.1.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\messagepack\\2.5.140\\messagepack.2.5.140.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\messagepack.annotations\\2.5.140\\messagepack.annotations.2.5.140.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.authorization\\7.0.9\\microsoft.aspnetcore.authorization.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.components\\7.0.9\\microsoft.aspnetcore.components.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.components.analyzers\\7.0.9\\microsoft.aspnetcore.components.analyzers.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.components.authorization\\8.0.1\\microsoft.aspnetcore.components.authorization.8.0.1.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.components.forms\\7.0.9\\microsoft.aspnetcore.components.forms.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.components.web\\7.0.9\\microsoft.aspnetcore.components.web.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.components.webassembly\\7.0.9\\microsoft.aspnetcore.components.webassembly.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.components.webassembly.devserver\\7.0.9\\microsoft.aspnetcore.components.webassembly.devserver.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.aspnetcore.metadata\\7.0.9\\microsoft.aspnetcore.metadata.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.configuration\\7.0.0\\microsoft.extensions.configuration.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\7.0.0\\microsoft.extensions.configuration.abstractions.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.configuration.binder\\7.0.4\\microsoft.extensions.configuration.binder.7.0.4.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.configuration.fileextensions\\7.0.0\\microsoft.extensions.configuration.fileextensions.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.configuration.json\\7.0.0\\microsoft.extensions.configuration.json.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\7.0.0\\microsoft.extensions.dependencyinjection.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\7.0.0\\microsoft.extensions.dependencyinjection.abstractions.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.fileproviders.abstractions\\7.0.0\\microsoft.extensions.fileproviders.abstractions.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.fileproviders.physical\\7.0.0\\microsoft.extensions.fileproviders.physical.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.filesystemglobbing\\7.0.0\\microsoft.extensions.filesystemglobbing.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.logging\\7.0.0\\microsoft.extensions.logging.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\7.0.1\\microsoft.extensions.logging.abstractions.7.0.1.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.options\\7.0.1\\microsoft.extensions.options.7.0.1.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.extensions.primitives\\7.0.0\\microsoft.extensions.primitives.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.identitymodel.abstractions\\7.2.0\\microsoft.identitymodel.abstractions.7.2.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\7.2.0\\microsoft.identitymodel.jsonwebtokens.7.2.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.identitymodel.logging\\7.2.0\\microsoft.identitymodel.logging.7.2.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.identitymodel.tokens\\7.2.0\\microsoft.identitymodel.tokens.7.2.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.jsinterop\\7.0.9\\microsoft.jsinterop.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.jsinterop.webassembly\\7.0.9\\microsoft.jsinterop.webassembly.7.0.9.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.net.stringtools\\17.6.3\\microsoft.net.stringtools.17.6.3.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\system.identitymodel.tokens.jwt\\7.2.0\\system.identitymodel.tokens.jwt.7.2.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\system.io.packaging\\8.0.0\\system.io.packaging.8.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\system.io.pipelines\\7.0.0\\system.io.pipelines.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\6.0.0\\system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\system.text.encodings.web\\7.0.0\\system.text.encodings.web.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\system.text.json\\7.0.0\\system.text.json.7.0.0.nupkg.sha512",
+    "C:\\Users\\hitesh.kumar\\.nuget\\packages\\microsoft.netcore.app.runtime.mono.browser-wasm\\7.0.9\\microsoft.netcore.app.runtime.mono.browser-wasm.7.0.9.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1202",
+      "level": "Error",
+      "message": "Package Microsoft.AspNetCore.Components.Authorization 8.0.1 is not compatible with net7.0 (.NETCoreApp,Version=v7.0). Package Microsoft.AspNetCore.Components.Authorization 8.0.1 supports: net8.0 (.NETCoreApp,Version=v8.0)",
+      "libraryId": "Microsoft.AspNetCore.Components.Authorization",
+      "targetGraphs": [
+        "net7.0"
+      ]
+    },
+    {
+      "code": "NU1202",
+      "level": "Error",
+      "message": "Package Microsoft.AspNetCore.Components.Authorization 8.0.1 is not compatible with net7.0 (.NETCoreApp,Version=v7.0) / browser-wasm. Package Microsoft.AspNetCore.Components.Authorization 8.0.1 supports: net8.0 (.NETCoreApp,Version=v8.0)",
+      "libraryId": "Microsoft.AspNetCore.Components.Authorization",
+      "targetGraphs": [
+        "net7.0/browser-wasm"
+      ]
+    }
+  ]
+}

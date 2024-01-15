@@ -1,0 +1,265 @@
+@typeparam TItem
+
+@using System.Linq.Expressions
+
+@inject IJSRuntime JSRuntime
+<div>
+  <div class="form-field">
+    <div class="chips">
+        @if(selectedItems!=null)
+        {
+            @foreach (var item in selectedItems.OrderBy(item => _valueExpression(item))) {
+                <div class="chip">
+                    <span class="chip--text">@_valueExpression(item)</span>
+                    <span class="chip--button" @onclick="@(() => OnItemRemoveClicked(item))">x</span>
+                </div>
+            }
+        }
+    </div>
+       
+    <div class="autocomplete-container">
+        <div class="autocomplete-input-container">
+            <input id="@Id" class="autocomplete-input rounded p-2 pr-4" type="text" @bind="_inputText"
+                @oninput="OnTextEntered" @onblur="OnInputBlur" @onfocus="OnInputFocus" @onkeydown="OnKeyDown"
+                placeholder="@Placeholder" disabled=@Disabled />
+            @if (SelectedItem != null && !Disabled)
+            {
+                <i class="autocomplete-clear-button bi bi-x pointer" @onclick="OnClearClicked"></i>
+            }
+        </div>
+        @if (_displayDropdown && !Disabled)
+        {
+            <div class="dropdown-container bg-white m-0">
+                <ul class="m-0" style="list-style: none;" autofocus>
+                    @{
+                        var index = 0;
+                        if (_filteredItems != null)
+                        {
+                            @foreach (var item in _filteredItems.OrderBy(item => _valueExpression(item)))
+                            {
+                                var id = $"ul-li-{index}";
+                                @if (index == activeIndex)
+                                {
+                                    <li id="@id" class="p-2 pointer active" @onclick="@(() => OnItemClicked(item))">@_valueExpression(item)
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li id="@id" class="p-2 pointer" @onclick="@(() => OnItemClicked(item))">@_valueExpression(item)</li>
+                                }
+                                index++;
+                            }
+                        }
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+ </div>
+@code
+{
+    private IEnumerable<TItem> _sourceItems = Enumerable.Empty<TItem>();
+    private IEnumerable<TItem> _filteredItems = Enumerable.Empty<TItem>();
+    private Func<TItem, string> _valueExpression;
+    private string _inputText;
+    private bool _displayDropdown;
+    private int activeIndex = 0;
+    bool IsSetParametersEnabled = true;
+
+    [Parameter]
+    public IEnumerable<TItem> Items
+    {
+        get { return _sourceItems; }
+        set
+        {
+            if(IsSetParametersEnabled) {
+                _sourceItems = value; 
+                _filteredItems = _sourceItems;
+                if(value.Count()>0) {
+                    IsSetParametersEnabled = false;
+                }
+            }
+        }
+    }
+
+    [Parameter]
+    public Expression<Func<TItem, string>> ValueExpression { get; set; }
+
+    [Parameter]
+    public TItem SelectedItem { get; set; }
+
+    [Parameter]
+    public string Text
+    {
+        get
+        {
+            return _inputText;
+        }
+        set
+        {
+            if (!AllowFreeText)
+            {
+                return;
+            }
+            _inputText = value;
+        }
+    }
+
+    [Parameter]
+    public EventCallback<TItem> SelectedItemChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<List<TItem>> GetSelectedItems { get; set; }
+
+    [Parameter]
+    public EventCallback<string> TextChanged { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; }
+
+    [Parameter]
+    public bool AllowFreeText { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string Id { get; set; }
+
+    private List<TItem> selectedItems=new List<TItem>();
+
+    protected override Task OnInitializedAsync()
+    {
+        _valueExpression = ValueExpression.Compile();
+        return Task.CompletedTask;
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        SetValues();
+        return Task.CompletedTask;
+    }
+
+    private void SetValues()
+    {
+        if (SelectedItem == null && !AllowFreeText)
+        {
+            _inputText = null;
+            _filteredItems = _sourceItems;
+        }
+        else if (SelectedItem == null && AllowFreeText)
+        {
+            _filteredItems = _sourceItems;
+        }
+        else if (SelectedItem != null && !AllowFreeText)
+        {
+            _inputText = _valueExpression(SelectedItem);
+        }
+    }
+
+    private Task OnTextEntered(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        return OnTextEntered(value);
+    }
+
+    private Task OnTextEntered(string value)
+    {
+        _inputText = value;
+        if (string.IsNullOrEmpty(_inputText))
+        {
+            _filteredItems = _sourceItems;
+        }
+        else
+        {
+            _filteredItems = _sourceItems
+            .Where(item => _valueExpression(item)?.Contains(value, StringComparison.CurrentCultureIgnoreCase) == true);
+            var filteredItem = _filteredItems.FirstOrDefault(item => _valueExpression(item)?.Equals(_inputText,
+            StringComparison.CurrentCultureIgnoreCase) == true);
+            if (filteredItem != null)
+            {
+                return OnItemClicked(filteredItem);
+            }
+            else if (AllowFreeText)
+            {
+                _displayDropdown = false;
+            }
+        }
+        return TextChanged.InvokeAsync(_inputText);
+    }
+
+    private Task OnInputFocus(FocusEventArgs args)
+    {
+        OnClearClicked();
+        OnTextEntered(string.Empty);
+        activeIndex = 0;
+        return Task.Delay(300)
+        .ContinueWith(_ =>
+        {
+            _displayDropdown = true;
+            StateHasChanged();
+        }, TaskContinuationOptions.OnlyOnRanToCompletion);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key.Equals("ArrowDown") && activeIndex < (Items.Count() - 1))
+        {
+            await JSRuntime.InvokeVoidAsync("scrollIntoView", $"ul-li-{activeIndex}");
+            activeIndex++;
+        }
+        else if (args.Key.Equals("ArrowUp") && activeIndex > 0)
+        {
+            activeIndex--;
+            await JSRuntime.InvokeVoidAsync("scrollIntoView", $"ul-li-{activeIndex}");
+        }
+        else if (args.Key.Equals("Enter"))
+        {
+            var item = _filteredItems.ElementAtOrDefault(activeIndex);
+            await OnItemClicked(item);
+        }
+    }
+
+    private async Task OnInputBlur(FocusEventArgs args)
+    {
+        await Task.Delay(300);
+        SetValues();
+        _displayDropdown = false;
+        await TextChanged.InvokeAsync(_inputText);
+    }
+
+    private async Task OnItemRemoveClicked(TItem item) {
+        selectedItems.Remove(item);
+        List<TItem> itemlist = _sourceItems.ToList();
+        itemlist.Add(item);
+        IsSetParametersEnabled = true;
+        Items = itemlist;
+    }
+
+    private async Task OnItemClicked(TItem item)
+    {
+        _inputText = _valueExpression(item);
+        _displayDropdown = false;
+        SelectedItem = item;
+        selectedItems.Add(item);
+
+        List<TItem> itemlist = _sourceItems.ToList();
+        bool isremoved= itemlist.Remove(item);
+        await SelectedItemChanged.InvokeAsync(item);
+        await GetSelectedItems.InvokeAsync(selectedItems);
+        
+        await TextChanged.InvokeAsync(_inputText);
+        await OnClearClicked();
+        IsSetParametersEnabled = true;
+        Items = itemlist;
+    }
+
+    private async Task OnClearClicked()
+    {
+        _inputText = string.Empty;
+        SelectedItem = default(TItem);
+        await SelectedItemChanged.InvokeAsync(default(TItem));
+        await TextChanged.InvokeAsync(null);
+    }
+}

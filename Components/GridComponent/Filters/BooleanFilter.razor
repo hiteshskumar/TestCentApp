@@ -1,0 +1,43 @@
+@using System.Reflection
+
+@if (IsNullableBoolean)
+{
+    <select class="form-control border rounded p-1 w-100 font-13" @onchange="@OnOptionChanged">
+        <option value="">Empty</option>
+        <option value="True">True</option>
+        <option value="False">False</option>
+        <option value="All" selected="selected">All</option>
+    </select>
+}
+else
+{
+    <select class="form-control border rounded p-1 w-100 font-13" @onchange="@OnOptionChanged">
+        <option value="True">True</option>
+        <option value="False">False</option>
+        <option value="All" selected="selected">All</option>
+    </select>
+}
+
+@code
+{
+    [Parameter]
+    public bool IsNullableBoolean { get; set; }
+    [Parameter]
+    public string Value { get; set; }
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    private Task OnOptionChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString() switch
+        {
+            "" => null,
+            "True" => "True",
+            "False" => "False",
+            "All" => string.Empty,
+            _ => throw new InvalidFilterCriteriaException($"Invalid option: {args.Value}"),
+        };
+        Value = value;
+        return ValueChanged.InvokeAsync(value);
+    }
+}

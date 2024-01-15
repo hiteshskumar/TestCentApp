@@ -1,0 +1,826 @@
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components
+@using ChargesWFM.UI.Components.Controls
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Modal;
+@using ChargesWFM.UI.Services
+@using System;
+@using System.Collections.Generic;
+@using System.Linq;
+@using System.Threading.Tasks;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using MatBlazor;
+@using Microsoft.JSInterop;
+@using Newtonsoft.Json;
+@using System.Text;
+@using System.Text.RegularExpressions;
+@using System.Data;
+@using System.Reflection;
+@using ChargesWFM.UI.Components.Validations;
+@* @inject IToasterService ToasterService *@
+@inject ILogger<TimeSheetDetails> Logger
+
+<section class="card">
+    <div class="production-coding-title">
+        <b>TimeSheet Details</b>
+    </div>
+    <div class="row">
+        <div class="col-md-2 pe-0">
+            <label class="form-label mb-0">SubClient</label>
+            <select class="form-control" style="min-width: 100px !important;" value="@SubClientName" @onchange="OnSubClientChanged" disabled = "@IsSubClientDisable">
+                @foreach (var item in subClientProperty)
+                {
+                    <option Value="@item.Item2"> @item.Item2 </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 pe-0">
+            <label class="form-label mb-0">Software</label>
+            <select class="form-control" style="min-width: 100px !important;" value="@SoftwareName"  @onchange="OnSoftwareChanged" disabled = "@IsSoftwareDisable">
+                @foreach (var item in softwareProperty)
+                {
+                    <option Value="@item.Item2"> @item.Item2 </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 pe-0">
+            <label class="form-label mb-0">Billable Group</label>
+            <select class="form-control" style="min-width: 100px !important;"  value="@BillableGroupName" @onchange="OnBillableGroupChanged"  disabled = "@IsBillableGroupDisable">
+                @foreach (var item in billableGroupProperty)
+                {
+                    <option Value="@item.Item2"> @item.Item2 </option>
+                }
+            </select>
+        </div>
+        @if(ScreenName != "EditScreen")
+        {
+            <div class="col-md-2 pe-0">
+                <label class="form-label mb-0">Client Login</label>
+                <select class="form-control" value="@ClientLogin" @onchange="OnClientLoginChanged" style="min-width: 100px !important;">
+                    @foreach (var item in clientLoginProperty)
+                    {
+                        <option Value="@item.Item2"> @item.Item2 </option>
+                    }
+                </select>
+            </div>
+        }
+        @if(ScreenName == "EditScreen")
+        {
+            <div class="col-md-2 pe-0">
+                <div class="ml-3 pt-3">
+                    <label class="form-label mb-0">Status</label>
+                </div>
+                <div class="ml-3">
+                    <label>@lblStatus</label>
+                </div>
+            </div>
+        }
+        <div class="col-md-2 pe-0">
+            <label class="form-label mb-0">Task <span style="color:red">*</span></label>
+            <select class="form-control" style="min-width: 100px !important;" value="@TaskID" @onchange="OnTaskChanged" disabled = "@IsTask">
+                @foreach (var item in taskProperty)
+                {
+                    <option Value="@item.Item1"> @item.Item2 </option>
+                }
+            </select>
+            @if (editTransactionValidation != null)
+            {
+                @foreach (var error in editTransactionValidation.GetErrors("task"))
+                {
+                    <div class="d-flex">
+                        <span class="text-danger">@error</span>
+                    </div>
+                }
+            }
+        </div>
+        <div class="col-md-2 pe-0">
+            <label class="form-label mb-0">Sub Task <span style="color:red">*</span></label>
+            <select class="form-control" style="min-width: 100px !important;"  value="@SubTaskID"  @onchange="@OnSubTaskChanged" disabled = "@IsSubTask">
+                @foreach (var item in subTaskProperty)
+                {
+                    <option Value="@item.Item1"> @item.Item2 </option>
+                }
+            </select>
+            @if (editTransactionValidation != null)
+            {
+                @foreach (var error in editTransactionValidation.GetErrors("subtask"))
+                {
+                    <div class="d-flex">
+                        <span class="text-danger">@error</span>
+                    </div>
+                }
+            }
+        </div>
+        <div class="col-md-2 ps-1">
+            <div class="ml-3 pt-3">
+                <label class="form-label mb-0">Target <span style="color:red">*</span></label>
+            </div>
+            <div class="ml-3">
+                <label>@LabelTarget</label>
+            </div>
+        </div>
+    </div>
+</section>
+@* </EditForm> *@
+
+@code
+{
+    private List<Tuple<PropertyInfo, string>> subClientProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<PropertyInfo, string>> softwareProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<PropertyInfo, string>> billableGroupProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<PropertyInfo, string>> clientLoginProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<int, string>> taskProperty = new List<Tuple<int, string>>();
+    private List<Tuple<int, string>> subTaskProperty = new List<Tuple<int, string>>();
+    private List<Tuple<PropertyInfo, string>> statusProperty = new List<Tuple<PropertyInfo, string>>();
+    [Inject]
+    protected AuthenticationStateProvider AuthProvider { get; set; } = null!;
+    [Inject]
+    ILocalStorageService LocalStorageService { get; set; } = null!;
+    [Inject]
+    protected HttpClient Http { get; set; } = null!;
+    [Parameter]
+    public int ProjectGroupId { get; set; }
+    [Parameter]
+    public string? SchemaName { get; set; }
+    public long AccountDetailID { get; set; }
+    [Parameter]
+    public EditProductionValidation editTransactionValidation {get; set;} = null!;
+    [Parameter]
+    public string TimeSheetSubClient {get; set;}
+    [Parameter]
+    public string TimeSheetSoftware {get; set;}
+    [Parameter]
+    public string TimeSheetBillableGroup {get; set;}
+
+    private GetProjectGroupSubClientsResult[] dsSubClientData = null!;
+    private SoftwareUserLoginAccess[] dsClientLogin = null!;
+    private GetSoftwareResult[] dsSoftwareData = null!;
+    private GetBillableGroupResult[] dsBillableGroupData = null!;
+    private GetTaskResult[] dsTaskData = null!;
+    private GetSubTaskResult[] dsSubTaskData = null!;
+    private GetSavedAccountDetailsResult[] dsStatusData = null!;
+    private GetInternalTargetResult[] dsTargetData = null!;
+    private bool displayLoading;
+    private string? progressText { get; set; }
+    private bool isEnabled = false;
+    private int EmployeeID { get; set; }
+    public int SubClientID;
+    public string? SubClientName;
+    public string? ClientLogin;
+    public int SoftwareID;
+    public string? SoftwareName;
+    public int BillableGroupID;
+    public string? BillableGroupName;
+    public int TaskID { get; set; }
+    public string? TaskName { get; set; }
+    public int SubTaskID { get; set; }
+    public string? SubTaskName { get; set; }
+    public string? lblTarget;
+    public string? LabelTarget;
+    public string? lblStatus;
+    [Parameter]
+    public List<EmployeeAccountDetails> Accounts { get; set; } = null!;
+    [Parameter]
+    public EventCallback<List<EmployeeAccountDetails>> AccountsChanged { get; set; }
+    [Parameter]
+    public EventCallback<List<EmployeeAccountDetails>> TimeSheetTaskChanged { get; set; }
+    
+    [Parameter]
+    public string? ScreenName { get; set; }
+
+    [Parameter]
+    public bool IsBillableGroupDisable { get; set; }
+    [Parameter]
+    public bool IsSubClientDisable { get; set; }
+    [Parameter]
+    public bool IsSoftwareDisable { get; set; }
+    [Parameter]
+    public bool IsTask { get; set; }
+    [Parameter]
+    public bool IsSubTask { get; set; }
+    public string? TaskValue { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await LocalStorageService.GetAsync<AuthenticatedUser>();
+        EmployeeID = user.EmployeeId;
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        if (projectGroup != null)
+        {
+            ProjectGroupId = projectGroup.ProjectGroupID;
+            SchemaName = projectGroup.SchemaName;
+        }
+        await FetchProjectGroupSubClient();
+        this.StateHasChanged();
+    }
+    @* private void DisplayLoading(bool display, string? progressMessage = null)
+        {
+        displayLoading = display;
+        progressText = progressMessage ?? string.Empty;
+        StateHasChanged();
+        } *@
+
+    @* protected async Task OnProjectGroupChanged(NexgenProjectGroups pg)
+        {
+        this.ProjectGroupID = pg.ProjectGroupID;
+        await this.FetchProjectGroupSubClient();
+        this.StateHasChanged();
+        } *@
+    private async Task FetchProjectGroupSubClient()
+    {
+        try
+        {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsSubClientData = await
+            ApiHelper.GetUsingMsgPackAsync<GetProjectGroupSubClientsResult[]>($"/EditProduction/GetProjectGroupSubClients/ProjectGroupID/{projectGroup.ProjectGroupID}/EmployeeID/{EmployeeID}",
+            Http, AuthState.Token);
+            
+            subClientProperty.Clear();
+            subClientProperty = new List<Tuple<PropertyInfo, string>>();
+            
+            var type = typeof(GetProjectGroupSubClientsResult);
+            foreach (var item in dsSubClientData)
+            {
+                //this.SubClientID = item.SubClientID;
+                subClientProperty.Add(Tuple.Create(type.GetProperty(item.SubClient), item.SubClient));
+            };
+            if(this.ScreenName == "EditScreen" || this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation")
+            {
+                    Console.WriteLine("TimeSheetSubClient"  + TimeSheetSubClient);
+                    if(dsSubClientData.Any(exp => exp.SubClient == TimeSheetSubClient))
+                    {   
+                        var subClientModel = dsSubClientData.Where(exp => exp.SubClient == TimeSheetSubClient).FirstOrDefault();
+                        if(subClientModel != null)
+                        {
+                           await this.UpdateSubClientInAccountModel(subClientModel);
+                        }
+                    }
+                    else
+                    {
+                        var model = dsSubClientData!.FirstOrDefault()!;
+                        await this.UpdateSubClientInAccountModel(model);
+                    }            
+            }
+            if(this.ScreenName == "AddScreen") 
+            {
+                var model = dsSubClientData!.FirstOrDefault()!;
+                await this.UpdateSubClientInAccountModel(model);
+            }
+           // await FetchLCMClientLoginDetails();
+           
+           
+            
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task UpdateSubClientInAccountModel(GetProjectGroupSubClientsResult model)
+    {
+        var SubClientID_Property = typeof(EmployeeAccountDetails).GetProperty("SubClientID");
+        Accounts.ForEach(account => SubClientID_Property!.SetValue(account, model!.SubClientID));
+        var SubClient_Property = typeof(EmployeeAccountDetails).GetProperty("SubClient");
+        Accounts.ForEach(account => SubClient_Property!.SetValue(account, model!.SubClient));
+        this.SubClientID = model!.SubClientID;
+        this.SubClientName = model.SubClient;
+        StateHasChanged();
+        await FetchSoftwareData(this.SubClientID);
+        await FetchLCMClientLoginDetails();
+        StateHasChanged();
+    }
+    private async Task FetchLCMClientLoginDetails()
+    {
+        try
+        {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsClientLogin = await
+            ApiHelper.GetUsingMsgPackAsync<SoftwareUserLoginAccess[]>($"/EditProduction/GetLCMClientLoginDetails/EmployeeID/{EmployeeID}/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{SubClientID}",
+            Http, AuthState.Token);
+           
+            clientLoginProperty.Clear();
+            clientLoginProperty = new List<Tuple<PropertyInfo, string>>();
+            
+            var type = typeof(SoftwareUserLoginAccess);
+            foreach (var item in dsClientLogin)
+            {
+                clientLoginProperty.Add(Tuple.Create(type.GetProperty(item.ClientLogin), item.ClientLogin));
+            };
+            
+            if(this.ScreenName == "EditScreen"  || this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation")
+            {
+                var editAccount = Accounts.FirstOrDefault();
+                if(editAccount != null)
+                {
+                    if(dsClientLogin.Any(exp => exp.ClientLogin == editAccount.ClientLogin))
+                    {
+                        var clientLoginModel = dsClientLogin.Where(exp => exp.ClientLogin == editAccount.ClientLogin).FirstOrDefault();
+                        UpdateClientLoginInAccountModel(clientLoginModel!);
+                    }
+                    else
+                    {
+                        var model = dsClientLogin!.FirstOrDefault()!;
+                        UpdateClientLoginInAccountModel(model);
+                    }
+                }
+                
+            }
+            if(this.ScreenName == "AddScreen") 
+            {
+                var model = dsClientLogin!.FirstOrDefault()!;
+                UpdateClientLoginInAccountModel(model);
+            }
+           // await FetchSoftwareData(SubClientID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private void UpdateClientLoginInAccountModel(SoftwareUserLoginAccess model)
+    {
+        var clProperty = typeof(EmployeeAccountDetails).GetProperty("ClientLogin");
+        Accounts.ForEach(account => clProperty!.SetValue(account, model.ClientLogin));
+        this.StateHasChanged();
+        ClientLogin = model.ClientLogin;
+    }
+    private async Task FetchSoftwareData(int subClientId)
+    {
+        try
+        {
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider;
+            dsSoftwareData = await
+            ApiHelper.GetUsingMsgPackAsync<GetSoftwareResult[]>($"/EditProduction/GetSoftwareData/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{subClientId}/EmployeeID/{EmployeeID}",
+            Http, AuthState.Token);
+            
+            softwareProperty.Clear();
+            softwareProperty = new List<Tuple<PropertyInfo, string>>();
+            
+            var type = typeof(GetSoftwareResult);
+            foreach (var item in dsSoftwareData)
+            {
+                softwareProperty.Add(Tuple.Create(type.GetProperty(item.Software), item.Software));
+            };
+           
+            if(this.ScreenName == "EditScreen"  || this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation")
+            {
+                    Console.WriteLine("TimeSheetSoftware " + TimeSheetSoftware);
+                    if(dsSoftwareData.Any(exp => exp.Software == TimeSheetSoftware))
+                    {
+                        var softwareModel = dsSoftwareData.Where(exp => exp.Software == TimeSheetSoftware).FirstOrDefault();
+                        UpdateSoftwareInAccountModel(softwareModel!);
+                    }
+                    else
+                    {
+                        var model = dsSoftwareData!.FirstOrDefault()!;
+                        UpdateSoftwareInAccountModel(model);
+                    }
+                
+            }
+            if(this.ScreenName == "AddScreen") 
+            {
+                var model = dsSoftwareData!.FirstOrDefault()!;
+                UpdateSoftwareInAccountModel(model);
+            }
+            await FetchBillableGroupData(SubClientID, SoftwareID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private void UpdateSoftwareInAccountModel(GetSoftwareResult model)
+    {       
+        var Software_Property = typeof(EmployeeAccountDetails).GetProperty("Software");
+        Accounts.ForEach(account => Software_Property!.SetValue(account, model.Software));
+        var SoftwareID_Property = typeof(EmployeeAccountDetails).GetProperty("SoftwareID");
+        Accounts.ForEach(account => SoftwareID_Property!.SetValue(account, model.SoftwareID));     
+        this.StateHasChanged();   
+        this.SoftwareID = model!.SoftwareID;
+        this.SoftwareName = model.Software;
+    }
+    private async Task FetchBillableGroupData(int subClientId, int softwareId)
+    {
+        try
+        {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsBillableGroupData = await
+            ApiHelper.GetUsingMsgPackAsync<GetBillableGroupResult[]>($"/EditProduction/GetBillableGroupData/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{subClientId}/EmployeeID/{EmployeeID}/SoftwareID/{softwareId}",
+            Http, AuthState.Token);
+            
+            billableGroupProperty.Clear();
+            billableGroupProperty = new List<Tuple<PropertyInfo, string>>();
+           
+            var type = typeof(GetBillableGroupResult);
+            foreach (var item in dsBillableGroupData)
+            {
+                billableGroupProperty.Add(Tuple.Create(type.GetProperty(item.BillableGroup), item.BillableGroup));
+            };
+
+            if(this.ScreenName == "EditScreen" || this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation")
+            {
+                
+                    Console.WriteLine("TimeSheetBillableGroup " + TimeSheetBillableGroup);
+                    if(dsBillableGroupData.Any(exp => exp.BillableGroup == TimeSheetBillableGroup))
+                    {
+                        var billableGroupModel = dsBillableGroupData.Where(exp => exp.BillableGroup == TimeSheetBillableGroup).FirstOrDefault();
+                        UpdateBillableGroupInAccountModel(billableGroupModel!);
+                    }
+                    else
+                    {
+                        var model = dsBillableGroupData!.FirstOrDefault()!;
+                        UpdateBillableGroupInAccountModel(model);
+                    }
+               
+            }
+            if(this.ScreenName == "AddScreen") 
+            {
+               var model = dsBillableGroupData!.FirstOrDefault()!;
+               UpdateBillableGroupInAccountModel(model);
+            }
+            await FetchTaskData(subClientId, softwareId, BillableGroupID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private void UpdateBillableGroupInAccountModel(GetBillableGroupResult model)
+    {        
+        var BillableGroup_Property = typeof(EmployeeAccountDetails).GetProperty("BillableGroup");
+        Accounts.ForEach(account => BillableGroup_Property!.SetValue(account, model.BillableGroup));
+        var BillableGroupID_Property = typeof(EmployeeAccountDetails).GetProperty("BillableGroupID");
+        Accounts.ForEach(account => BillableGroupID_Property!.SetValue(account, model.BillableGroupID));
+        this.StateHasChanged();
+        this.BillableGroupID = model!.BillableGroupID;
+        this.BillableGroupName = model.BillableGroup;
+    }
+    private async Task FetchTaskData(int subClientId, int softwareId, int billableGroupId)
+    {
+        try
+        {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsTaskData = await
+            ApiHelper.GetUsingMsgPackAsync<GetTaskResult[]>($"/EditProduction/GetTaskData/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{subClientId}/BillableGroupID/{billableGroupId}/SoftwareID/{softwareId}",
+            Http, AuthState.Token);
+            taskProperty.Clear();
+            taskProperty = new List<Tuple<int, string>>();
+            var type = typeof(GetTaskResult);
+            foreach (var item in dsTaskData)
+            {
+                taskProperty.Add(Tuple.Create(item.TaskID, item.CodingStatus));
+                //TaskID = item.TaskID;
+            };
+
+            if(this.ScreenName == "EditScreen" || this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation")
+            {
+                var editAccount = Accounts.FirstOrDefault();
+                if(editAccount != null)
+                {
+                    if(dsTaskData.Any(exp => exp.CodingStatus == editAccount.task) && this.ScreenName == "EditScreen")
+                    {
+                        var taskModel = dsTaskData.Where(exp => exp.CodingStatus == editAccount.task).FirstOrDefault();
+                        UpdateTaskInAccountModel(taskModel!);
+                    }
+                    else if(dsTaskData.Any(exp => exp.TaskID.ToString() == editAccount.task) && (this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation"))
+                    {
+                        var taskModel = dsTaskData.Where(exp => exp.TaskID.ToString() == editAccount.task).FirstOrDefault();
+                        UpdateTaskInAccountModel(taskModel!);
+                    }
+                    else
+                    {
+                       var model = dsTaskData!.FirstOrDefault()!;
+                       UpdateTaskInAccountModel(model);
+                    }
+                }
+            }
+
+            if(this.ScreenName == "AddScreen") {
+               var model = dsTaskData!.FirstOrDefault()!;
+               UpdateTaskInAccountModel(model!);
+            }
+            await FetchSubTaskData(subClientId, softwareId, billableGroupId, TaskID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private void UpdateTaskInAccountModel(GetTaskResult model)
+    {      
+        var Task_Property = typeof(EmployeeAccountDetails).GetProperty("task");
+        Accounts.ForEach(account => Task_Property!.SetValue(account, model.CodingStatus));
+        var TaskID_Property = typeof(EmployeeAccountDetails).GetProperty("taskid");
+        Accounts.ForEach(account => TaskID_Property!.SetValue(account, model.TaskID));
+        this.StateHasChanged();
+        this.TaskID = model!.TaskID;
+        this.TaskName = model!.CodingStatus;
+    }
+    public async Task OnTaskChanged(ChangeEventArgs args)
+    {
+        TaskID = Convert.ToInt16(args.Value); 
+        string? Task = dsTaskData.Where(e=>e.TaskID == TaskID).Select(exp => exp.CodingStatus).FirstOrDefault();     
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("taskid");
+        var taskProperty = typeof(EmployeeAccountDetails).GetProperty("task");
+        Accounts.ForEach(account => property!.SetValue(account, TaskID));
+        Accounts.ForEach(account => taskProperty!.SetValue(account, Task));
+        Accounts.ToList()[0].InternalTarget = Convert.ToDecimal(lblTarget);
+
+        if(this.ScreenName == "EditScreen")
+        {
+            var sbtproperty = typeof(EmployeeAccountDetails).GetProperty("subtaskid");
+            var SubTaskProperty = typeof(EmployeeAccountDetails).GetProperty("subtask");
+            Accounts.ForEach(account => sbtproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => SubTaskProperty!.SetValue(account, string.Empty));
+            Accounts.ToList()[0].InternalTarget = Convert.ToDecimal("0");  
+            lblTarget = string.Empty;
+            LabelTarget = string.Empty; 
+        }
+
+        await FetchSubTaskData(SubClientID, SoftwareID, BillableGroupID, TaskID);
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+        await TimeSheetTaskChanged.InvokeAsync(Accounts);
+        StateHasChanged();
+    }
+    private async Task FetchSubTaskData(int subClientId, int softwareId, int billableGroupId, int taskId)
+    {
+        try
+        {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsSubTaskData = await
+            ApiHelper.GetUsingMsgPackAsync<GetSubTaskResult[]>($"/EditProduction/GetSubTaskData/ProjectGroupID/{projectGroup.ProjectGroupID}/BillableGroupID/{billableGroupId}/TaskID/{taskId}/SubClientID/{subClientId}/SoftwareID/{softwareId}",
+            Http, AuthState.Token);
+            
+            StateHasChanged();
+            subTaskProperty.Clear();
+            subTaskProperty = new List<Tuple<int, string>>();
+            var type = typeof(GetSubTaskResult);
+            foreach (var item in dsSubTaskData)
+            {
+                subTaskProperty.Add(Tuple.Create(item.SubTaskID, item.SubTask));
+                lblTarget = Convert.ToString(dsSubTaskData[0].InternalTarget);
+                LabelTarget = Convert.ToString(dsSubTaskData[0].InternalTarget) + "%";
+            };
+
+            if(dsSubTaskData.Count() == 0)
+            {
+                lblTarget = string.Empty;
+                LabelTarget = string.Empty;
+            }
+           
+            if(this.ScreenName == "EditScreen"  || this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation")
+            {
+                var editAccount = Accounts.FirstOrDefault();  
+                if(editAccount != null)
+                {
+                    if(dsSubTaskData.Any(exp => exp.SubTaskID == editAccount.subtaskid) && this.ScreenName == "EditScreen")
+                    {
+                        var subTaskModel = dsSubTaskData.Where(exp => exp.SubTaskID == editAccount.subtaskid).FirstOrDefault();
+                        UpdateSubTaskInAccountModel(subTaskModel);
+                    }
+                    else if(dsSubTaskData.Any(exp => exp.SubTaskID.ToString() == editAccount.subtask) && (this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation"))
+                    {
+                        var subTaskModel = dsSubTaskData.Where(exp => exp.SubTaskID.ToString() == editAccount.subtask).FirstOrDefault();
+                        UpdateSubTaskInAccountModel(subTaskModel);
+                    }
+                    else
+                    {
+                        var model = dsSubTaskData!.FirstOrDefault()!;
+                        UpdateSubTaskInAccountModel(model);
+                    }
+                    var internalTarget  = dsSubTaskData.Where(e => e.SubTaskID == SubTaskID).FirstOrDefault();
+                    if(internalTarget != null)
+                    {
+                        Accounts.ToList()[0].InternalTarget = Convert.ToDecimal(internalTarget.InternalTarget);  
+                        lblTarget = Convert.ToString(internalTarget.InternalTarget);   
+                        LabelTarget = Convert.ToString(internalTarget.InternalTarget) + "%";  
+                    }
+                    
+                }
+            }
+           
+            if(this.ScreenName == "AddScreen") 
+            {
+                var model = dsSubTaskData!.FirstOrDefault()!;
+                UpdateSubTaskInAccountModel(model);
+            }
+            if(this.ScreenName == "EditScreen")
+            {
+                await FetchStatusData();
+            } 
+            
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private void UpdateSubTaskInAccountModel(GetSubTaskResult model)
+    {        
+        var SubTask_Property = typeof(EmployeeAccountDetails).GetProperty("subtask");
+        Accounts.ForEach(account => SubTask_Property!.SetValue(account, model.SubTask));
+        var SubTaskID_Property = typeof(EmployeeAccountDetails).GetProperty("subtaskid");
+        Accounts.ForEach(account => SubTaskID_Property!.SetValue(account, model.SubTaskID));    
+        this.StateHasChanged();
+        this.SubTaskID = model!.SubTaskID;
+        this.SubTaskName = model!.SubTask;
+    }
+    public async Task OnSubTaskChanged(ChangeEventArgs args)
+    {
+        SubTaskID = Convert.ToInt16(args.Value);    
+        this.SubTaskID = SubTaskID;    
+        string? SubTask = dsSubTaskData.Where(e=>e.SubTaskID == SubTaskID).Select(exp => exp.SubTask).FirstOrDefault();
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("subtaskid");
+        Accounts.ForEach(account => property!.SetValue(account, SubTaskID));
+        var SubTaskProperty = typeof(EmployeeAccountDetails).GetProperty("subtask");
+        Accounts.ForEach(account => SubTaskProperty!.SetValue(account, SubTask));
+        var internalTarget  = dsSubTaskData.Where(e => e.SubTaskID == SubTaskID).FirstOrDefault();
+        if(internalTarget != null)
+        {
+            Accounts.ToList()[0].InternalTarget = Convert.ToDecimal(internalTarget.InternalTarget);  
+            lblTarget = Convert.ToString(internalTarget.InternalTarget);   
+            LabelTarget = Convert.ToString(internalTarget.InternalTarget) + "%";  
+        }
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+        await TimeSheetTaskChanged.InvokeAsync(Accounts);
+        StateHasChanged();
+    }
+    public async Task OnSubClientChanged(ChangeEventArgs args)
+    {
+        SubClientName = args!.Value!.ToString()!;
+        SubClientID = dsSubClientData.Where(exp => exp.SubClient == SubClientName).Select(ex => ex.SubClientID).FirstOrDefault();
+
+        if(this.ScreenName == "EditScreen")
+        {
+            var sftproperty = typeof(EmployeeAccountDetails).GetProperty("SoftwareID");
+            var softwareProperty = typeof(EmployeeAccountDetails).GetProperty("Software");
+            Accounts.ForEach(account => sftproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => softwareProperty!.SetValue(account, string.Empty));
+        }
+
+        await FetchSoftwareData(SubClientID);
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("SubClientID");
+        Accounts.ForEach(account => property!.SetValue(account, SubClientID));
+        var SubClientProperty = typeof(EmployeeAccountDetails).GetProperty("SubClient");
+        Accounts.ForEach(account => SubClientProperty!.SetValue(account, SubClientName));
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    
+    public async Task OnSoftwareChanged(ChangeEventArgs args)
+    {
+        SoftwareName = args!.Value!.ToString()!;
+        SoftwareID = dsSoftwareData.Where(exp => exp.Software == SoftwareName).Select(ex => ex.SoftwareID).FirstOrDefault();
+
+        if(this.ScreenName == "EditScreen")
+        {
+            var sftproperty = typeof(EmployeeAccountDetails).GetProperty("BillableGroupID");
+            var softwareProperty = typeof(EmployeeAccountDetails).GetProperty("BillableGroup");
+            Accounts.ForEach(account => sftproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => softwareProperty!.SetValue(account, string.Empty));
+        }
+
+        await FetchBillableGroupData(SubClientID, SoftwareID);
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("SoftwareID");
+        Accounts.ForEach(account => property!.SetValue(account, SoftwareID));
+        var SoftwareProperty = typeof(EmployeeAccountDetails).GetProperty("Software");
+        Accounts.ForEach(account => SoftwareProperty!.SetValue(account, SoftwareName));
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    public async Task OnBillableGroupChanged(ChangeEventArgs args)
+    {
+        BillableGroupName = args!.Value!.ToString()!;
+        BillableGroupID = dsBillableGroupData.Where(exp => exp.BillableGroup == BillableGroupName).Select(ex => ex.BillableGroupID).FirstOrDefault();
+
+        if(this.ScreenName == "EditScreen")
+        {
+            var tskproperty = typeof(EmployeeAccountDetails).GetProperty("taskid");
+            var taskProperty = typeof(EmployeeAccountDetails).GetProperty("task");
+            Accounts.ForEach(account => tskproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => taskProperty!.SetValue(account, string.Empty));
+        }
+
+        await FetchTaskData(SubClientID, SoftwareID, BillableGroupID);
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("BillableGroupID");
+        Accounts.ForEach(account => property!.SetValue(account, BillableGroupID));
+        var BillableGroupProperty = typeof(EmployeeAccountDetails).GetProperty("BillableGroup");
+        Accounts.ForEach(account => BillableGroupProperty!.SetValue(account, BillableGroupName));
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    public async Task OnClientLoginChanged(ChangeEventArgs args)
+    {
+        ClientLogin = args!.Value!.ToString()!;
+        var ClientLoginProperty = typeof(EmployeeAccountDetails).GetProperty("ClientLogin");
+        Accounts.ForEach(account => ClientLoginProperty!.SetValue(account, ClientLogin));
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    
+    private async Task FetchStatusData()
+    {
+        try
+        {
+            var AccId = Accounts.ToList();
+            AccountDetailID = AccId.ToList()[0].AccountDetailID;
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsStatusData = await
+            ApiHelper.GetUsingMsgPackAsync<GetSavedAccountDetailsResult[]>($"/EditProduction/GetSavedAccountDetailsData/ProjectGroupID/{projectGroup.ProjectGroupID}/AccountDetailID/{AccountDetailID}/SchemaName/{SchemaName}",
+            Http, AuthState.Token);
+            statusProperty.Clear();
+            statusProperty = new List<Tuple<PropertyInfo, string>>();
+            var type = typeof(GetSavedAccountDetailsResult);
+            foreach (var item in dsStatusData)
+            {
+                statusProperty.Add(Tuple.Create(type.GetProperty(item.AccountStatus), item.AccountStatus));
+                lblStatus = Convert.ToString(item.AccountStatus);
+            };
+
+            if(this.ScreenName == "EditScreen")
+            {
+                var editAccount = Accounts.FirstOrDefault();
+                if(editAccount != null)
+                {
+                    lblStatus = editAccount.AccountStatusID == 1 ? "Coded" : editAccount.AccountStatusID == 2 ? "Pended" : string.Empty;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task FetchTargetData(int billableGroupId, int taskId, int subTaskId)
+    {
+        try
+        {
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider;
+            dsTargetData = await
+            ApiHelper.GetUsingMsgPackAsync<GetInternalTargetResult[]>($"/EditProduction/GetInternalTarget/ProjectGroupID/{projectGroup.ProjectGroupID}/BillableGroupID/{billableGroupId}/TaskID/{taskId}/SubTaskID/{subTaskId}",
+            Http, AuthState.Token);
+            @* subTaskProperty.Clear();
+            subTaskProperty = new List<Tuple<int, string>>();
+            var type = typeof(GetInternalTargetResult); *@
+            foreach (var item in dsTargetData)
+            {
+                @* subTaskProperty.Add(Tuple.Create(item.SubTaskID, item.SubTask)); *@
+                lblTarget = Convert.ToString(item.InternalTarget);
+                LabelTarget = Convert.ToString(item.InternalTarget) + "%";                
+            };
+            //await FetchStatusData();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,3045 @@
+@page "/modifyproduction"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.Controls;
+@using ChargesWFM.UI.Services;
+@using BlazorDownloadFile;
+@inject ILogger<ModifyProduction> Logger
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IHotKeyService HotKeyService
+@inject IJSRuntime JSRuntime;
+@using System;
+@using System.Data;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Threading.Tasks;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using MatBlazor;
+@using Microsoft.JSInterop;
+@using Newtonsoft.Json;
+@using System.Globalization;
+@using System.Reflection;
+@using ChargesWFM.UI.Components.Validations;
+@inject IEditTransactionService EditTransactionService
+@inject NavigationManager NavigationManager
+
+@* <ContentWrapper Header="Modify Production" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup"> *@
+    @* <AuthorizeView Policy="EditProductionAccess">
+        <Authorized Context="Auth"> *@
+            @if(projectGroupID == 7119 && EmployeeID == 22004)
+            {
+                <input class="btn btn-success btn-sm m-t-10" type="button" value="QC Test" @onclick="(e => CallMethodRedirectQMS())"> 
+            }
+            @if(ScreenName == "AddScreen")
+            {
+                <PageHeading Title="Employee Transaction"></PageHeading>
+            }
+
+            @if(ScreenName == "EditScreen")
+            {
+                <PageHeading Title="Edit Employee Transaction"></PageHeading>
+            }
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">      
+                <EditForm id="agent-transaction-form" class="w-100" Model="@Accounts" autocomplete="off">          
+                    <EditProductionValidation @ref="editTransactionValidation"></EditProductionValidation>                
+                    <div class="">
+                         <section class="card">
+                            <div class="production-coding-title">
+                                <b>TimeSheet Details</b>
+                            </div>
+                            <div class="row">
+                            <div class="col-md-2 pe-0">
+                            <label class="form-label mb-0">SubClient</label>
+                            <select class="form-control" style="min-width: 100px !important;" value="@SubClientName" @onchange="OnSubClientChanged" disabled = "@IsSubClientDisable">
+                                @foreach (var item in subClientProperty)
+                                {
+                                    <option Value="@item.Item2"> @item.Item2 </option>
+                                }
+                            </select>
+                            </div>
+                            <div class="col-md-2 pe-0">
+                                <label class="form-label mb-0">Software</label>
+                                <select class="form-control" style="min-width: 100px !important;" value="@SoftwareName"  @onchange="OnSoftwareChanged" disabled = "@IsSoftwareDisable">
+                                    @foreach (var item in softwareProperty)
+                                    {
+                                        <option Value="@item.Item2"> @item.Item2 </option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2 pe-0">
+                                <label class="form-label mb-0">Billable Group</label>
+                                <select class="form-control" style="min-width: 100px !important;"  value="@BillableGroupName" @onchange="OnBillableGroupChanged"  disabled = "@IsBillableGroupDisable">
+                                    @foreach (var item in billableGroupProperty)
+                                    {
+                                        <option Value="@item.Item2"> @item.Item2 </option>
+                                    }
+                                </select>
+                            </div>
+                            @if(ScreenName != "EditScreen")
+                            {
+                                <div class="col-md-2 pe-0">
+                                    <label class="form-label mb-0">Client Login</label>
+                                    <select class="form-control" value="@ClientLogin" @onchange="OnClientLoginChanged" style="min-width: 100px !important;">
+                                        @foreach (var item in clientLoginProperty)
+                                        {
+                                            <option Value="@item.Item2"> @item.Item2 </option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                            @if(ScreenName == "EditScreen")
+                            {
+                                <div class="col-md-2 pe-0">
+                                    <div class="ml-3 pt-3">
+                                        <label class="form-label mb-0">Status</label>
+                                    </div>
+                                    <div class="ml-3">
+                                        <label>@lblStatus</label>
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-md-2 pe-0">
+                                <label class="form-label mb-0">Task <span style="color:red">*</span></label>
+                                <select class="form-control" style="min-width: 100px !important;" value="@TaskID" @onchange="OnTaskChanged">
+                                    @foreach (var item in taskProperty)
+                                    {
+                                        <option Value="@item.Item1"> @item.Item2 </option>
+                                    }
+                                </select>
+                                @if (editTransactionValidation != null)
+                                {
+                                    @foreach (var error in editTransactionValidation.GetErrors("task"))
+                                    {
+                                        <div class="d-flex">
+                                            <span class="text-danger">@error</span>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            <div class="col-md-2 pe-0">
+                                <label class="form-label mb-0">Sub Task <span style="color:red">*</span></label>
+                                <select class="form-control" style="min-width: 100px !important;"  value="@SubTaskID"  @onchange="@OnSubTaskChanged">
+                                    @foreach (var item in subTaskProperty)
+                                    {
+                                        <option Value="@item.Item1"> @item.Item2 </option>
+                                    }
+                                </select>
+                                @if (editTransactionValidation != null)
+                                {
+                                    @foreach (var error in editTransactionValidation.GetErrors("subtask"))
+                                    {
+                                        <div class="d-flex">
+                                            <span class="text-danger">@error</span>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            <div class="col-md-2 ps-1">
+                                <div class="ml-3 pt-3">
+                                    <label class="form-label mb-0">Target <span style="color:red">*</span></label>
+                                </div>
+                                <div class="ml-3">
+                                    <label>@LabelTarget</label>
+                                </div>
+                            </div>
+                        </div>
+                        </section>
+                        @* <TimeSheetDetails 
+                            ProjectGroupId="@ProjectGroupID"
+                            SchemaName="@schemaName" 
+                            TimeSheetSubClient = "@SelectedSubClient"
+                            TimeSheetSoftware = "@SelectedSoftware"
+                            TimeSheetBillableGroup = "@SelectedBillableGroup"
+                            IsBillableGroupDisable = "@IsBillableGroupDisable"
+                            IsSubClientDisable = "@IsSubClientDisable"
+                            IsSoftwareDisable = "@IsSoftwareDisable"
+                            IsTask = "@IsTask"
+                            IsSubTask = "@IsSubTask"
+                            TimeSheetTaskChanged="@OnTaskChanged"
+                            Accounts="@Accounts" editTransactionValidation="@editTransactionValidation" ScreenName = "@screenName"></TimeSheetDetails> *@
+                    </div>              
+                    @foreach (var fieldsection in placementFieldSections)
+                    {
+                        @if (fieldsection.Equals("Patient Details"))
+                        {
+                            <section class="card">
+                            <div class="production-coding-title">
+                                <b>@fieldsection</b>
+                            </div>
+                            
+                                <div class="row">
+                                    @foreach (var CodingSections in ProjectGroupFieldsData)
+                                    {
+                                        @if (CodingSections.CodingSectionID == 1 && CodingSections.IsOneToOneField == 1)
+                                        {
+                                            @if (CodingSections.ShowHideFlag == 0)
+                                            {
+                                                @if (CodingSections.InputControl == "Text" && CodingSections.CodingFieldID != 10)
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName</label>
+                                                        <input id="@GenerateId(CodingSections.CodingField)" value="@GetValue(CodingSections.CodingField)"
+                                                        @oninput="@(args => OnValueChanged(CodingSections.CodingField, args.Value.ToString()))"
+                                                        placeholder="@CodingSections.WaterMark" disabled = "@CodingSections.IsEditable"  tabindex="@CodingSections.TabIndex" class="form-control rounded" 
+                                                        type="text" minlength="1" maxlength="100" required style= "@CodingSections.MandatoryBorder"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"/>
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                                @if (CodingSections.CodingFieldID == 10)
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName</label>
+                                                        <textarea rows="1" maxlength="2000" onfocus="(this.rows = '5')" onblur="(this.rows = '1')" class="form-control rounded" id="@GenerateId(CodingSections.CodingField)"
+                                                        value="@GetValue(CodingSections.CodingField)" style= "@CodingSections.MandatoryBorder" tabindex = "@CodingSections.TabIndex"
+                                                        @oninput="@(args => OnTextAreaChanged(CodingSections.CodingField, args.Value))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable"></textarea>
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "TextArea")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName</label>
+                                                        <textarea rows="1" onfocus="(this.rows = '5')" onblur="(this.rows = '1')" class="form-control rounded" id="@GenerateId(CodingSections.CodingField)"
+                                                        value="@GetValue(CodingSections.CodingField)" style= "@CodingSections.MandatoryBorder" tabindex = "@CodingSections.TabIndex"
+                                                        @oninput="@(args => OnTextAreaChanged(CodingSections.CodingField, args.Value))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable"></textarea>
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "List")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName</label>
+                                                        @* <AutoComplete Id="@GenerateId(CodingSections.CodingField)" IsStartWith="true" TItem="MasterTableData"
+                                                            Items="@CodingSections.Masters" ValueExpression="masterValue => masterValue.MasterValue"
+                                                            Placeholder="@CodingSections.WaterMark" AllowFreeText="true"
+                                                            Text="@GetTextMasterValue(CodingSections.CodingField)"
+                                                            TextChanged="@(value => OnTextMasterValueChanged(CodingSections.CodingFieldID,CodingSections.CodingField, value))">
+                                                        </AutoComplete> *@
+                                                        <AutoComplete Id="@GenerateId(CodingSections.CodingField)" IsStartWith="true" BorderStyle="@CodingSections.MandatoryBorder"
+                                                                            TItem="MasterTableData"  TabIndex = "@CodingSections.TabIndex"
+                                                                            Items="@CodingSections.Masters" RetainValue = "@CodingSections.IsRetainValueOnSave"  
+                                                                            ValueExpression="masterValue => masterValue.MasterValue" 
+                                                                            Placeholder="@CodingSections.WaterMark" 
+                                                                            SelectedItem="@GetMasterValue(CodingSections.CodingField, CodingSections.Masters)" 
+                                                                            SelectedItemChanged="@(value => OnMasterValueChanged(CodingSections.CodingField, CodingSections.CodingFieldID, value))" disabled="@CodingSections.IsEditable">
+                                                                            </AutoComplete>
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "Date" && CodingSections.CodingFieldID != 13)
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName (mm/dd/yyyy)</label>
+                                                        <input type="date" onkeydown="if(!this.value)(this.type='text')" onblur="(this.type='date')" id="@GenerateId(CodingSections.CodingField)" class="autocomplete-input rounded p-2" tabindex = "@CodingSections.TabIndex"
+                                                        style="margin-top:-1px !important; @CodingSections.MandatoryBorder" value="@GetDateTimeValue(CodingSections.CodingField)"
+                                                        @onchange="@(args => OnDateTimeValueChanged(CodingSections.CodingField, args.Value.ToString()))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable">
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "Date" && CodingSections.CodingFieldID == 13)
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName (mm/dd/yyyy)</label>
+                                                        <input type="date" onkeydown="if(!this.value)(this.type='text')" onblur="(this.type='date')" max=@Today id="@GenerateId(CodingSections.CodingField)" class="autocomplete-input rounded p-2" tabindex = "@CodingSections.TabIndex"
+                                                        style="margin-top:-1px !important; @CodingSections.MandatoryBorder" value="@GetDateTimeValue(CodingSections.CodingField)"
+                                                        @onchange="@(args => OnDateTimeValueChanged(CodingSections.CodingField, args.Value.ToString()))" 
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable">
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "CheckBox")
+                                                {
+                                                    @if(CodingSections.IsMandatory == 1)                                                    
+                                                    {
+                                                        <span style="color:red">* </span>                                                    
+                                                    }
+                                                    <input type="checkbox" Id="@GenerateId(CodingSections.CodingField)" class="me-1 ms-2" disabled="@CodingSections.IsEditable" /><b>@CodingSections.DisplayName</b>
+                                                }
+                                            }
+                                        }
+                                    }
+                                </div>
+                            </section>
+                        }
+                    }
+                    @foreach (var fieldsection in placementFieldSections)
+                    {
+                        @if (fieldsection.Equals("Provider Fields"))
+                        {
+                            <div class="production-coding-title">
+                                <b>@fieldsection</b>
+                            </div>
+                        
+                            <section class="card">
+                                <div class="row">
+                                    @foreach (var CodingSections in ProjectGroupFieldsData)
+                                    {
+                                        @if (CodingSections.CodingSectionID == 7 && CodingSections.IsOneToOneField == 1)
+                                        {
+                                            @if (CodingSections.ShowHideFlag == 0)
+                                            {
+                                                @if (CodingSections.InputControl == "Text")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label mb-0">@CodingSections.DisplayName</label>
+                                                        <input id="@GenerateId(CodingSections.CodingField)" value="@GetValue(CodingSections.CodingField)"
+                                                        @oninput="@(args => OnValueChanged(CodingSections.CodingField, args.Value.ToString()))"
+                                                        placeholder="@CodingSections.WaterMark" tabindex="@CodingSections.TabIndex" class="form-control rounded"
+                                                        type="text" minlength="1" maxlength="100" required style= "@CodingSections.MandatoryBorder"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable"/>
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "TextArea")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName</label>
+                                                        <textarea rows="1" onfocus="(this.rows = '5')" onblur="(this.rows = '1')" class="form-control rounded" id="@GenerateId(CodingSections.CodingField)"
+                                                        value="@GetValue(CodingSections.CodingField)" style= "@CodingSections.MandatoryBorder" tabindex = "@CodingSections.TabIndex"
+                                                        @oninput="@(args => OnTextAreaChanged(CodingSections.CodingField, args.Value))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable"></textarea>
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "List")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName</label>
+                                                        @if (CodingSections.DisplayName != "PatientGender")
+                                                        {
+                                                            @* <AutoComplete Id="@GenerateId(CodingSections.CodingField)" IsStartWith="true" TItem="MasterTableData"
+                                                                Items="@CodingSections.Masters"
+                                                                ValueExpression="masterValue => masterValue.MasterValue"
+                                                                Placeholder="@CodingSections.WaterMark" AllowFreeText="true"
+                                                                Text="@GetTextMasterValue(CodingSections.CodingField)" 
+                                                                TextChanged="@(value => OnTextMasterValueChanged(CodingSections.CodingFieldID, CodingSections.CodingField, value))" >
+                                                            </AutoComplete> *@
+                                                            <AutoComplete Id="@GenerateId(CodingSections.CodingField)" IsStartWith="true" BorderStyle="@CodingSections.MandatoryBorder"
+                                                                            TItem="MasterTableData" TabIndex = "@CodingSections.TabIndex"
+                                                                            Items="@CodingSections.Masters" RetainValue = "@CodingSections.IsRetainValueOnSave"
+                                                                            ValueExpression="masterValue => masterValue.MasterValue" 
+                                                                            Placeholder="@CodingSections.WaterMark" 
+                                                                            SelectedItem="@GetMasterValue(CodingSections.CodingField, CodingSections.Masters)" 
+                                                                            SelectedItemChanged="@(value => OnMasterValueChanged(CodingSections.CodingField, CodingSections.CodingFieldID, value))" disabled="@CodingSections.IsEditable">
+                                                                            </AutoComplete>
+                                                            @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                            {
+                                                                <div class="d-flex">
+                                                                    <span class="text-danger">@error</span>
+                                                                </div>
+                                                            }
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "Date")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                         <label class="form-label">@CodingSections.DisplayName (mm/dd/yyyy)</label> 
+                                                        <input type="date" onkeydown="if(!this.value)(this.type='text')" onblur="(this.type='date')" id="@GenerateId(CodingSections.CodingField)" class="autocomplete-input rounded p-2" tabindex = "@CodingSections.TabIndex"
+                                                        style="margin-top:-1px !important; @CodingSections.MandatoryBorder" value="@GetDateTimeValue(CodingSections.CodingField)"
+                                                        @onchange="@(args => OnDateTimeValueChanged(CodingSections.CodingField, args.Value.ToString()))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable">
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "CheckBox")
+                                                {
+                                                    @if(CodingSections.IsMandatory == 1)                                                    
+                                                    {
+                                                        <span style="color:red">* </span>                                                    
+                                                    }
+                                                    <input type="checkbox" Id="@GenerateId(CodingSections.CodingField)" class="me-1 ms-2" disabled="@CodingSections.IsEditable"/>
+                                                    <span>@CodingSections.DisplayName</span>
+                                                }
+                                            }
+                                        }
+                                    }
+                                </div>
+                            </section>
+                        }
+                    }
+                    @foreach (var fieldsection in placementFieldSections)
+                    {
+                        @if (fieldsection.Equals("Buffer Section"))
+                        {
+                            <div class="production-coding-title">
+                                <b>@fieldsection</b>
+                            </div>
+                            <section class="card">
+                                @for (int i = 0; i < BufferSections.Count; i++)
+                                {
+                                    int index = i;
+                                    <div class="row">
+                                        @foreach (var CodingSections in ProjectGroupFieldsData)
+                                        {
+                                            @if (CodingSections.CodingSectionID == 14 && CodingSections.ShowHideFlag == 0 && CodingSections.IsOneToOneField == 0)
+                                            {
+                                                @if (CodingSections.InputControl == "Text")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label mb-0">@CodingSections.DisplayName</label>
+                                                        <input id="@GenerateId(CodingSections.CodingField)" value="@GetMasterValueBufferSections(index, CodingSections.CodingField)"
+                                                        @oninput="@(value => UpdateBufferSections(CodingSections.CodingField, index, value.Value.ToString(),CodingSections.InputControl))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetMasterValueBufferSections(index, CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetMasterValueBufferSections(index, CodingSections.CodingField)))"
+                                                        placeholder="@CodingSections.WaterMark" tabindex="@CodingSections.TabIndex" style= "@CodingSections.MandatoryBorder" class="form-control rounded"
+                                                        type="text" minlength="1" maxlength="100" required  disabled="@CodingSections.IsEditable"/>      
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                                @if (CodingSections.InputControl == "List" || CodingSections.InputControl == "AutoComplete")
+                                                {                                                
+                                                    
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label mb-0">@CodingSections.DisplayName</label>
+                                                        <AutoComplete Id="@GenerateId(CodingSections.CodingField)" IsStartWith="true" TItem="MasterTableData"                                                             
+                                                            Items="@CodingSections.Masters" TabIndex = "@CodingSections.TabIndex" RetainValue = "@CodingSections.IsRetainValueOnSave"
+                                                            ValueExpression="masterValue => masterValue.MasterValue"
+                                                            Placeholder="@CodingSections.WaterMark" AllowFreeText="true"
+                                                            Text="@GetMasterValueBufferSections(index, CodingSections.CodingField)" 
+                                                            TextChanged="@(value => UpdateBufferSections(CodingSections.CodingField, index, value, CodingSections.InputControl))" disabled="@CodingSections.IsEditable">
+                                                        </AutoComplete>
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }  
+                                                @if (CodingSections.InputControl == "Date" && CodingSections.DisplayName != "DOS")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)                                                    
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName (mm/dd/yyyy)</label>
+                                                        <input type="date" onkeydown="if(!this.value)(this.type='text')" onblur="(this.type='date')" id="@GenerateId(CodingSections.CodingField)" class="autocomplete-input rounded p-2" tabindex = "@CodingSections.TabIndex"
+                                                        style="margin-top:-1px !important;  @CodingSections.MandatoryBorder" value="@GetMasterValueDateBufferSections(index, CodingSections.CodingField)"
+                                                        @onchange="@(args => UpdateBufferSections(CodingSections.CodingField, index, args.Value.ToString(), CodingSections.InputControl))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField,  @GetMasterValueDateBufferSections(index, CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField,  @GetMasterValueDateBufferSections(index, CodingSections.CodingField)))" disabled="@CodingSections.IsEditable">
+                                                        
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (CodingSections.InputControl == "Date" && CodingSections.DisplayName == "DOS")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        @if(CodingSections.IsMandatory == 1)
+                                                        {
+                                                            <span style="color:red">* </span>                                                    
+                                                        }
+                                                        <label class="form-label">@CodingSections.DisplayName (mm/dd/yyyy)</label>
+                                                        <input type="date" onkeydown="if(!this.value)(this.type='text')" onblur="(this.type='date')" max=@Today id="@GenerateId(CodingSections.CodingField)"  class="autocomplete-input rounded p-2" tabindex = "@CodingSections.TabIndex"
+                                                        style="margin-top:-1px !important;  @CodingSections.MandatoryBorder" value="@GetMasterValueDateBufferSections(index, CodingSections.CodingField)"
+                                                        @onchange="@(args => UpdateBufferSections(CodingSections.CodingField, index, args.Value.ToString(), CodingSections.InputControl))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField,  @GetMasterValueDateBufferSections(index, CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField,  @GetMasterValueDateBufferSections(index, CodingSections.CodingField)))" disabled="@CodingSections.IsEditable">
+                                                        
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))
+                                                        {
+                                                            <div class="d-flex">
+                                                                <span class="text-danger">@error</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }                                       
+                                            }
+                                        }
+                                        <div class="col-2 btn-group align-items-center mt-4">
+                                        @if(BufferSections.Count > 1)
+                                        {
+                                                <i class="fa fa-trash mr-2"style="color: red;" @onclick="@(() => RemoveBufferSections(index))"></i>
+                                           
+                                        }
+                                        <i class="fa fa-plus-circle" style="color: green;" aria-hidden="true" @onclick="AddBufferSections"></i>
+                                    </div>
+                                     </div>
+                                }
+                                    
+                               
+                            </section>
+                        }
+                    }
+                    @foreach (var fieldsection in placementFieldSections)
+                    {
+                        @if (fieldsection.Equals("EM Codes"))
+                        {
+                            <div class="dx-coding-title">
+                                <input type="checkbox" value="Em Code"  @onchange="eventArgs => CheckboxClicked((bool)eventArgs.Value)" >
+                                <label>&nbsp;</label>
+                                <b class="ng-binding">EM Codes - Case cancelled before induction / pre-op evaluation</b>
+                            </div>
+                            @if(IsShowEMCode)
+                            {
+                                <section class="card">
+                            <div class="production-coding-title">
+                                <b>@fieldsection</b>
+                            </div>
+                            
+                                @for (int i = 0; i < EMCodes.Count; i++)
+                                {
+                                    int index = i;
+                                    <div class="row">
+                                        @foreach (var CodingSections in ProjectGroupFieldsData)
+                                        {
+                                            @if (CodingSections.CodingSectionID == 4 && CodingSections.ShowHideFlag == 0 && CodingSections.IsOneToOneField == 0)
+                                            {
+                                                @if (CodingSections.InputControl == "Text")
+                                                {
+                                                    <div class="col-md-2 pe-0">
+                                                        <label class="form-label mb-0">@CodingSections.DisplayName</label>
+                                                        <input id="@GenerateId(CodingSections.CodingField)" value="@GetMasterValueEMCode(index, CodingSections.CodingField)"
+                                                        @oninput="@(value => UpdateEMCodes(CodingSections.CodingField, index, value.Value.ToString()))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        placeholder="@CodingSections.WaterMark" tabindex="@CodingSections.TabIndex" class="form-control rounded"
+                                                        type="text" minlength="1" maxlength="100" required   disabled="@CodingSections.IsEditable"/>      
+                                                    </div>
+                                                }
+                                                @if (CodingSections.InputControl == "List" || CodingSections.InputControl == "AutoComplete")
+                                                {                                                
+                                                    @if(CodingSections.IsMandatory == 1)                                                    
+                                                    {
+                                                        <span style="color:red">* </span>                                                    
+                                                    }
+                                                    <div class="col-md-2 pe-0">
+                                                        <label class="form-label mb-0">@CodingSections.DisplayName</label>
+                                                        <AutoComplete Id="@GenerateId(CodingSections.CodingField)" IsStartWith="true" TItem="MasterTableData" 
+                                                            Items="@CodingSections.Masters" TabIndex = "@CodingSections.TabIndex" RetainValue = "@CodingSections.IsRetainValueOnSave"
+                                                            ValueExpression="masterValue => masterValue.MasterValue"
+                                                            Placeholder="@CodingSections.WaterMark" AllowFreeText="true"
+                                                            Text="@GetMasterValueEMCode(index, CodingSections.CodingField)" 
+                                                            TextChanged="@(value => UpdateEMCodes(CodingSections.CodingField, index, value))" disabled="@CodingSections.IsEditable">
+                                                        </AutoComplete>
+                                                    </div>
+                                                }   
+                                                @if (CodingSections.InputControl == "Date")	
+                                                {	
+                                                    <div class="col-md-2 pe-0">	
+                                                        @if(CodingSections.IsMandatory == 1)                                                    	
+                                                        {	
+                                                            <span style="color:red">* </span>                                                    	
+                                                        }	
+                                                        <label class="form-label">@CodingSections.DisplayName (mm/dd/yyyy)</label>	
+                                                        <input type="date" onkeydown="if(!this.value)(this.type='text')" onblur="(this.type='date')" id="@GenerateId(CodingSections.CodingField)" class="autocomplete-input rounded p-2"	tabindex = "@CodingSections.TabIndex"
+                                                        style="margin-top:-1px !important;" 
+                                                        value="@GetMasterValueDateEMCode(index, CodingSections.CodingField)" 	
+                                                        @onchange="@(args => UpdateEMCodes(CodingSections.CodingField, index, args.Value.ToString()))"
+                                                        @onfocusin ="@(args => ChangeMandatoryBorderOnFocusIn(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))"
+                                                        @onfocusout ="@(args => ChangeMandatoryBorderOnFocusOut(CodingSections.CodingField, @GetValue(CodingSections.CodingField)))" disabled="@CodingSections.IsEditable">	
+                                                        	
+                                                        @foreach (var error in editTransactionValidation.GetErrors(CodingSections.CodingField))	
+                                                        {	
+                                                            <div class="d-flex">	
+                                                                <span class="text-danger">@error</span>	
+                                                            </div>	
+                                                        }	
+                                                    </div>	
+                                                }                                          
+                                            }
+                                        }
+                                       <div class="col-2 btn-group align-items-center mt-4">
+                                        @if(EMCodes.Count > 1)
+                                        {
+                                           
+                                                <i class="fa fa-trash mr-2"style="color: red;" @onclick="@(() => RemoveEMCodes(index))"></i>
+                                            
+                                        }
+                                        <i class="fa fa-plus-circle" style="color: green;" aria-hidden="true" @onclick="AddEMCodes"></i>
+                                    </div>
+                                    </div>
+                                }
+                            </section>
+                            }
+                        }
+                    }
+                    <div class="" style="text-align:right; width:100%; padding:0;">
+                        <input class="btn btn-success btn-sm m-t-10" type="button" value="Completed" disabled = "@ButtonDisabled"
+                        @onclick="(e => OnCompletedAccounts(1))"> &nbsp;
+                        <input class="btn btn-danger btn-sm m-t-10" type="button" value="Pended"  disabled = "@ButtonDisabled"
+                        @onclick="(e => OnCompletedAccounts(2))"> &nbsp;
+                        @if(HasSkip)
+                        {
+                         <input class="btn btn-primary btn-sm m-t-10" type="button" value="Skip"  disabled = "@ButtonDisabled"
+                        @onclick="(e => OnUpdateSkipReason())"> 
+                        } &nbsp;
+                        <input class="btn btn-warning btn-sm m-t-10" type="button" value="Cancel" 
+                        @onclick="(e => OnResetAccount())">
+                    </div>        
+                </EditForm>
+            </ProgressScreen>
+        @* </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView> *@
+@* </ContentWrapper> *@
+<DialogNew @ref="modal" Style="display: flex; height: auto !important; top: 40% !important;" DisplayClose = "false" DisplaySubmitButton="false" DisplayFooter="false" Title="QC Rework" >
+    <div>
+        <label><p style="color:red; font-size:17px; font-weight:bold;">@PendingMessage</p></label>
+        <div class="row">
+            <div class="col-11 pe-0">
+                <button type="button" class="btn btn-success btn-sm m-t-20"
+                    @onclick="@Open">Open</button>
+            </div>
+        </div>
+    </div>
+</DialogNew>
+
+@code
+{
+    [Inject]
+    protected AuthenticationStateProvider AuthProvider { get; set; }
+    [Inject]
+    protected HttpClient Http { get; set; }
+    [Inject]
+    ILocalStorageService? LocalStorageService { get; set; }
+    [Inject]
+    IQMSService? qmsService { get; set; }
+    [Inject]
+    IMatToaster Toaster { get; set; }
+    [Parameter]
+    public EventCallback<List<EmployeeAccountDetails>> AccountsChanged { get; set; }
+    [Parameter]
+    public List<EmployeeAccountDetails> Accounts { get; set; } = null!;
+    [Parameter]
+    public List<EditableFields> EditableCodingFields { get; set; } = null!;
+    [Parameter]
+    public string? SelectedClientLogin { get; set; }
+    [Parameter]
+    public string? SelectedSubClient { get; set; }
+    [Parameter]
+    public string? SelectedBillableGroup { get; set; }
+    [Parameter]
+    public string? SelectedSoftware { get; set; }
+    [Parameter]
+    public bool IsEditable { get; set; }
+    private IEnumerable<ProjectGroupFieldsData> ProjectGroupFieldsData = Enumerable.Empty<ProjectGroupFieldsData>();
+    private IEnumerable<TATDayConfiguration> TATDayConfigurationData = Enumerable.Empty<TATDayConfiguration>();
+    private IEnumerable<EmployeeAccountDetails> AccountDetailData = Enumerable.Empty<EmployeeAccountDetails>();
+    private Dictionary<string, string> ModifiedAccDetails = new Dictionary<string, string>();
+    @* private Dictionary<int, string> Gender = new Dictionary<int, string>() { { 1, "Male" }, { 2, "Female" } }; *@
+    private EmployeeAccountDetails? editAccountDetail;
+    private int projectGroupID = 0;
+    private int EmployeeID { get; set; }
+    public string schemaName = string.Empty;
+    private bool displayLoading;
+    private string? progressText { get; set; }
+    [Parameter]
+    public int ProjectGroupID { get; set; }
+    [Parameter]
+    public long AccountDetailID { get; set; }
+    [Parameter]
+    public EventCallback OnButtonClicked { get; set; }
+    private string? ProjectGroupName { get; set; }
+    private List<DropDownFieldValue> lstDDFieldValue = new List<DropDownFieldValue>();
+    private EditTransactionService editTransactionService;
+    
+    private string baseURI = string.Empty;
+    public string page { get; set; }
+    private EditProductionValidation editTransactionValidation;
+    [Parameter]
+    public string? ScreenName { get; set; }
+    [Parameter]
+    public bool IsBillableGroupDisable { get; set; }
+    [Parameter]
+    public bool IsSubClientDisable { get; set; }
+    [Parameter]
+    public bool IsSoftwareDisable { get; set; }
+    [Parameter]
+    public bool IsTask { get; set; }
+    [Parameter]
+    public bool IsSubTask { get; set; }
+    public string? screenName { get; set; }
+    [Parameter]
+    public bool HasSkip { get; set; } = false;
+    
+    private IEnumerable<string> placementFieldSections => ProjectGroupFieldsData
+    .OrderBy(placementFieldDetails => placementFieldDetails.DisplayOrder)
+    .Select(placementFieldDetails => placementFieldDetails.CodingSection)
+    .Distinct()
+    .ToList();
+
+    private IEnumerable<CascadingItems> CascadingItems = Enumerable.Empty<CascadingItems>();
+    private Dictionary<string, string> PrevFieldValue = new Dictionary<string, string>();
+    private List<ShowHideFieldList> ShowHideList = new List<ShowHideFieldList>();
+    private string Today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    private bool IsShowEMCode = false;
+    private DialogNew modal;
+    private string? PendingMessage;
+    private string? RedirectURL;
+    private string? screen;
+    private bool PGQCReworkStatus;
+    private IEnumerable<CodingFieldTypes> FieldTypes = Enumerable.Empty<CodingFieldTypes>();
+    private List<EditableFields> editableFields = new List<EditableFields>();
+    private List<EmployeeAccountDetails> editableAccounts = new List<EmployeeAccountDetails>();
+    private AuthenticatedUser? user;
+    private bool ButtonDisabled = false;
+
+    //TimeSheet Things 
+    private List<Tuple<PropertyInfo, string>> subClientProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<PropertyInfo, string>> softwareProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<PropertyInfo, string>> billableGroupProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<PropertyInfo, string>> clientLoginProperty = new List<Tuple<PropertyInfo, string>>();
+    private List<Tuple<int, string>> taskProperty = new List<Tuple<int, string>>();
+    private List<Tuple<int, string>> subTaskProperty = new List<Tuple<int, string>>();
+    private List<Tuple<PropertyInfo, string>> statusProperty = new List<Tuple<PropertyInfo, string>>();
+    private GetProjectGroupSubClientsResult[] dsSubClientData = null!;
+    private SoftwareUserLoginAccess[] dsClientLogin = null!;
+    private GetSoftwareResult[] dsSoftwareData = null!;
+    private GetBillableGroupResult[] dsBillableGroupData = null!;
+    private GetTaskResult[] dsTaskData = null!;
+    private GetSubTaskResult[] dsSubTaskData = null!;
+    private GetSavedAccountDetailsResult[] dsStatusData = null!;
+    private GetInternalTargetResult[] dsTargetData = null!;
+ 
+    private bool isEnabled = false;
+   
+    public int SubClientID;
+    public string? SubClientName;
+    public string? ClientLogin;
+    public int SoftwareID;
+    public string? SoftwareName;
+    public int BillableGroupID;
+    public string? BillableGroupName;
+    public int TaskID { get; set; }
+    public string? TaskName { get; set; }
+    public int SubTaskID { get; set; }
+    public string? SubTaskName { get; set; }
+    public string? lblTarget;
+    public string? LabelTarget;
+    public string? lblStatus;
+   
+    public string? TaskValue { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await LocalStorageService!.GetAsync<AuthenticatedUser>();
+        EmployeeID = user.EmployeeId;
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        projectGroupID = projectGroup.ProjectGroupID;
+        schemaName = projectGroup!.SchemaName; 
+        screenName = this.ScreenName;
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        if(timeSheetData == null){
+            timeSheetData = new TimeSheetData();
+            await LocalStorageService.SetAsync<TimeSheetData>(timeSheetData);
+        }
+        if(string.IsNullOrEmpty(SelectedClientLogin))
+        {
+            ClientLogin = timeSheetData.ClientLogin;
+            SelectedClientLogin = ClientLogin;
+        }
+        if(string.IsNullOrEmpty(SelectedSubClient))
+        {
+            SubClientID = timeSheetData.SubClientID ?? 0;
+            SubClientName = timeSheetData.SubClient; 
+            SelectedSubClient = SubClientName;  
+        }
+        if(string.IsNullOrEmpty(SelectedSoftware))
+        {
+            SoftwareID = timeSheetData.SoftwareID ?? 0;
+            SoftwareName = timeSheetData.Software;
+            SelectedSoftware = SoftwareName;
+        }
+        if(string.IsNullOrEmpty(SelectedBillableGroup))
+        {
+            BillableGroupID = timeSheetData.BillableGroupID ?? 0;
+            BillableGroupName = timeSheetData.BillableGroup;
+            SelectedBillableGroup = BillableGroupName;
+        }
+        TaskID = timeSheetData.TaskID ?? 0;
+        TaskName = timeSheetData.Task;
+        SubTaskID = timeSheetData.SubTaskID ?? 0;
+        SubTaskName = timeSheetData.SubTask;
+        LabelTarget = Convert.ToString(timeSheetData.InternalTarget) + "%" ;
+
+        var AuthState = (AuthStateProvider)AuthProvider;
+        string apiURL = $"/Production/GetPGQCReworkConfiguration/ProjectGroupID/{projectGroupID}";
+        PGQCReworkStatus = await ApiHelper.GetUsingMsgPackAsync<bool>(apiURL,Http,AuthState.Token);
+        if (PGQCReworkStatus)
+        {
+            await this.CallMethodRedirectQMS();
+        }
+        this.ButtonDisabled = false;
+        await FetchProjectGroupSubClient(); 
+        await this.GetProjectGroupFieldsData(projectGroupID);
+        await this.GetCascadingItems(projectGroupID);
+        await this.GetShowHideList(projectGroupID);
+        await this.GetTATDayConfiguration(projectGroupID);
+        if(this.ScreenName == "EditScreen") 
+        {
+            await this.ValidateReportingFields();
+            var emcodes = Accounts[0].EMCodes;
+            if(emcodes != null && emcodes.Count > 0)
+            {
+                for(int i = 0; i < emcodes.Count; i++)
+                {
+                    EMCodes.Add(emcodes[i]);
+                }
+            }
+            var buffersection = Accounts[0].BufferSections;
+            if(buffersection != null && buffersection.Count > 0)
+            {
+                for(int i = 0; i < buffersection.Count; i++)
+                {
+                    BufferSections.Add(buffersection[i]);
+                }
+            }
+        }
+        else
+        {   
+            EMCodes.Add(new EMCodeDetails());
+            BufferSections.Add(new BufferSectionDetails());
+        }
+        if(this.EditableCodingFields != null && this.EditableCodingFields.Count > 0)
+        {
+            this.ProjectGroupFieldsData = this.ProjectGroupFieldsData.
+                                Select(fields => {
+                                        var fieldData = fields;
+                                        var isEditFields = this.EditableCodingFields.Any(exp => exp.CodingField == fields.CodingField && exp.IsEditable == true);
+                                        fieldData.IsEditable = isEditFields;
+                                        return fieldData;
+                                }).ToList();
+        }
+
+        int taskId =  Accounts.FirstOrDefault()?.taskid ?? 0; 
+        int subtask = Accounts.FirstOrDefault()?.subtaskid ?? 0;
+        if (Accounts.Any() == true && IsTasks() && taskId > 0)
+        {
+            ApplyCascading(524,new List<int>() {taskId});
+        }
+
+        if (Accounts.Any() == true && IsSubTasks() && subtask > 0)
+        {
+            ApplyCascading( 525,new List<int>{subtask});
+        }
+    }
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            HotKeyService.OpenCompletedAction += OpenCompletedAction;
+            HotKeyService.OpenPendededAction += OpenPendededAction;
+            HotKeyService.SkipAction += SkipAction;
+        }
+    }
+
+    public void Dispose()
+    {
+        HotKeyService.OpenCompletedAction -= OpenCompletedAction;
+        HotKeyService.OpenPendededAction -= OpenPendededAction;
+        HotKeyService.SkipAction -= SkipAction;
+    }
+
+    private async void OpenCompletedAction(object sender, EventArgs e)
+    {
+        var isAccountSelected = Accounts?.Count == 0;
+        if (!isAccountSelected)
+        {
+            await OnCompletedAccounts(1);
+        }
+    }
+
+    private async void OpenPendededAction(object sender, EventArgs e)
+    {
+        var isAccountSelected = Accounts?.Count == 0;
+        if (!isAccountSelected)
+        {
+            await OnCompletedAccounts(2);
+        }
+    }
+
+    private async void SkipAction(object sender, EventArgs e)
+    {
+        var isAccountSelected = Accounts?.Count == 0;
+        if (!isAccountSelected)
+        {
+            await OnUpdateSkipReason();
+        }
+    }
+
+    @* public async Task OnProjectGroupChanged(NexgenProjectGroups pg)
+    {
+        this.ProjectGroupID = pg.ProjectGroupID;
+        this.ProjectGroupName = pg.ProjectGroupName;
+        schemaName = pg.SchemaName;
+        await this.GetProjectGroupFieldsData(ProjectGroupID);
+        if(this.EditableCodingFields.Count > 0)
+        {
+            this.ProjectGroupFieldsData = this.ProjectGroupFieldsData.
+                                Select(fields => {
+                                        var fieldData = fields;
+                                        var isEditFields = this.EditableCodingFields.Any(exp => exp.CodingField == fields.CodingField && exp.IsEditable == true);
+                                        fieldData.IsEditable = isEditFields;
+                                        return fieldData;
+                                }).ToList();
+        }
+        if(this.ScreenName == "EditScreen")
+        {
+          await OnResetAccount();
+        }
+        this.StateHasChanged();
+    } *@
+    private async Task GetProjectGroupFieldsData(int projectgroupId)
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");            
+            if(dsClientLogin.Count() == 0)
+            {
+                Toaster.Add("LCM Login Name fetch occurred! Contact Software Team!", MatToastType.Warning, screen);
+                this.ButtonDisabled = true;
+            }
+            else
+            {
+                this.ButtonDisabled = false;
+            }
+            var AuthState = (AuthStateProvider)AuthProvider;
+            ProjectGroupFieldsData = await
+            ApiHelper.GetUsingMsgPackAsync<ProjectGroupFieldsData[]>($"/EditProduction/GetFieldData/ProjectGroupID/{projectgroupId}",
+            Http,
+            AuthState.Token);
+            var mandFieldList = this.ProjectGroupFieldsData.Where(fld => fld.IsMandatory == 1).ToList();
+            foreach(var field in mandFieldList)
+            {
+                    var property = typeof(EmployeeAccountDetails).GetProperty(field.CodingField);
+                    if(property != null)
+                    {
+                        var value = property!.GetValue(Accounts.First());
+                        if(value == null)
+                        {
+                            this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field.CodingField && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid red !important");
+                        }
+                        else
+                        {
+                            this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field.CodingField && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid green !important");
+                        }
+                    }
+                    if(Accounts[0].BufferSections != null)
+                    {
+                        for(int i = 0; i < Accounts[0].BufferSections.Count; i++)
+                        {
+                            var BufferSection = Accounts[0].BufferSections[i];     
+                            var prop = BufferSection.GetType().GetProperty(field.CodingField);
+                            if(prop != null)
+                            {
+                                var value1 = prop.GetValue(BufferSection) == null ? string.Empty : prop.GetValue(BufferSection).ToString();
+                                if(value1 == "")
+                                {
+                                    this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field.CodingField && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid red !important");
+                                }
+                                else
+                                {
+                                    this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field.CodingField && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid green !important");
+                                }
+                            }
+                        }
+                    }
+            }
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task GetTATDayConfiguration(int ProjectGroupId)
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            TATDayConfigurationData = await
+            ApiHelper.GetUsingMsgPackAsync<TATDayConfiguration[]>($"/EditTransaction/GetTATDayConfiguration/ProjectGroupID/{ProjectGroupId}",
+            Http,
+            AuthState.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    public string GenerateId(string field)
+    {
+        if(Accounts.Any())
+        {
+            return $"{Accounts.First().AccountNumber}-{field}";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
+    private void DisplayLoading(bool display, string? progressMessage = null)
+        {
+            displayLoading = display;
+            progressText = progressMessage ?? string.Empty;
+            StateHasChanged();
+        }
+    private string GetValue(string field)
+    {
+        if(Accounts.Any())
+        {
+             return typeof(EmployeeAccountDetails)
+            .GetProperty(field)?
+            .GetValue(Accounts.First())?
+            .ToString();
+        }
+        else
+        {
+            return string.Empty;
+        }
+
+       
+    }
+
+    private string GetTextMasterValue(string field)
+    {
+        var value = typeof(EmployeeAccountDetails)
+        .GetProperty(field)
+        .GetValue(Accounts.First());
+        var codingFieldID = ProjectGroupFieldsData.Where(x => x.CodingField == field).Select(v => v.CodingFieldID).ToList();
+        if(codingFieldID.Count > 0 && value != null && value.ToString() != string.Empty)
+        {
+            var masterID = GetFieldValue(value.ToString(), codingFieldID[0]);                   
+            ShowHideField(codingFieldID[0], masterID);
+        }
+        return value?.ToString();
+    }
+    private async Task OnTextMasterValueChanged(int CodingFieldID, string field, string value)
+    {
+        if (value != null && value != string.Empty)
+        {
+            editTransactionValidation.ClearError(field);
+            var property = typeof(EmployeeAccountDetails)
+            .GetProperty(field);
+            Accounts.ForEach(account => property.SetValue(account, value));
+            await AccountsChanged.InvokeAsync(Accounts);
+            var masterID = GetFieldValue(value, CodingFieldID);
+            ShowHideField(CodingFieldID, masterID);
+            await ApplyCascading(CodingFieldID, masterID);
+        }
+    }
+    private async Task ApplyCascading(int CodingFieldID, List<int> masterID)
+    {
+        try
+        {
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        string fielName = string.Empty;
+        string prevField = string.Empty;
+        string crrentValue = string.Empty;
+        @* if (masterID.Count > 0)
+        { *@
+            var FieldID1 = CascadingItems.Any(x => x.FieldID1 == CodingFieldID);
+            var FieldID2 = CascadingItems.Any(x => x.FieldID2 == CodingFieldID);
+            var FieldID3 = CascadingItems.Any(x => x.FieldID3 == CodingFieldID);
+            var FieldID4 = CascadingItems.Any(x => x.FieldID4 == CodingFieldID);
+            var FieldID5 = CascadingItems.Any(x => x.FieldID5 == CodingFieldID);
+            var FieldID6 = CascadingItems.Any(x => x.FieldID6 == CodingFieldID);
+            var FieldID7 = CascadingItems.Any(x => x.FieldID7 == CodingFieldID);
+            var FieldID8 = CascadingItems.Any(x => x.FieldID8 == CodingFieldID);
+            var FieldID9 = CascadingItems.Any(x => x.FieldID9 == CodingFieldID);
+            if (FieldID1)
+            {
+                fielName = "FieldID2";
+                prevField = "FieldID1";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1");
+            }
+            else if (FieldID2)
+            {
+                fielName = "FieldID3";
+                prevField = "FieldID2";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID1"];                
+            }
+            else if (FieldID3)
+            {
+                fielName = "FieldID4";
+                prevField = "FieldID3";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID2"] + "," + PrevFieldValue["FieldID1"];
+            }
+            else if (FieldID4)
+            {
+                fielName = "FieldID5";
+                prevField = "FieldID4";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID3"] + "," + PrevFieldValue["FieldID2"] + "," +
+                PrevFieldValue["FieldID1"];
+            }
+            else if (FieldID5)
+            {
+                fielName = "FieldID6";
+                prevField = "FieldID5";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID4"] + "," + PrevFieldValue["FieldID3"] + "," +
+                PrevFieldValue["FieldID2"] + "," + PrevFieldValue["FieldID1"];
+            }
+            else if (FieldID6)
+            {
+                fielName = "FieldID7";
+                prevField = "FieldID6";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID5"] + "," + PrevFieldValue["FieldID4"] + "," +
+                PrevFieldValue["FieldID3"] + "," + PrevFieldValue["FieldID2"] + "," + PrevFieldValue["FieldID1"];
+            }
+            else if (FieldID7)
+            {
+                fielName = "FieldID8";
+                prevField = "FieldID7";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID6"] + "," + PrevFieldValue["FieldID5"] + "," + PrevFieldValue["FieldID4"] + "," +
+                PrevFieldValue["FieldID3"] + "," + PrevFieldValue["FieldID2"] + "," + PrevFieldValue["FieldID1"];
+            }
+            else if (FieldID8)
+            {
+                fielName = "FieldID9";
+                prevField = "FieldID8";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID7"] + "," + PrevFieldValue["FieldID6"] + "," + PrevFieldValue["FieldID5"] + "," + PrevFieldValue["FieldID4"] + "," +
+                PrevFieldValue["FieldID3"] + "," + PrevFieldValue["FieldID2"] + "," + PrevFieldValue["FieldID1"];
+            }
+            else if (FieldID9)
+            {
+                fielName = "FieldID10";
+                prevField = "FieldID9";
+                crrentValue = (masterID.Count > 0 ? masterID[0].ToString() : "-1") + "," + PrevFieldValue["FieldID8"] + "," + PrevFieldValue["FieldID7"] + "," + PrevFieldValue["FieldID6"] + "," + PrevFieldValue["FieldID5"] + "," + PrevFieldValue["FieldID4"] + "," +
+                PrevFieldValue["FieldID3"] + "," + PrevFieldValue["FieldID2"] + "," + PrevFieldValue["FieldID1"];
+            }
+            if (PrevFieldValue.ContainsKey(prevField))
+                PrevFieldValue[prevField] = (masterID.Count > 0 ? masterID[0].ToString() : "-1");
+            else
+                PrevFieldValue.Add(prevField, (masterID.Count > 0 ? masterID[0].ToString() : "-1"));
+            if(crrentValue != string.Empty)
+            {
+                var AuthState = (AuthStateProvider)AuthProvider;
+                var masterValue = await
+                ApiHelper.GetUsingMsgPackAsync<MasterTableDetailsWithCodingFieldID>($"/EditTransaction/GetMasterTableData/ProjectGroupID/{projectGroup.ProjectGroupID}/FieldName/{fielName}/PrevField/{prevField}/PrevFieldValue/{crrentValue}",
+                Http, AuthState.Token);
+                if (masterValue?.MasterTableDetails != null && masterValue?.MasterTableDetails.ToList().Count > 0)
+                {
+                    if (ProjectGroupFieldsData.Any(x => x.CodingFieldID == masterValue.MasterTableDetails.ToList()[0].CodingFieldID))
+                    {
+                        foreach (var CodingSection in ProjectGroupFieldsData)
+                        {
+                            if (CodingSection.CodingFieldID == masterValue.MasterTableDetails.ToList()[0].CodingFieldID)
+                            {
+                                try
+                                {
+                                    if (Accounts.Any())
+                                    {
+                                        var property = typeof(EmployeeAccountDetails).GetProperty(CodingSection.CodingField).GetValue(Accounts.First());
+                                        if(masterValue?.MasterTableDetails.Any(x => x.MasterValue == (string) property) == false)
+                                        {
+                                            var taskproperty = typeof(EmployeeAccountDetails).GetProperty(CodingSection.CodingField);
+                                            Accounts.ForEach(account => taskproperty!.SetValue(account, string.Empty));
+                                        }                                
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine("ex   " + ex.Message );
+                                }
+                                CodingSection.Masters = masterValue.MasterTableDetails;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (ProjectGroupFieldsData.Any(x => x.CodingFieldID == masterValue?.CodingFieldID))
+                    {
+                        foreach (var CodingSection in ProjectGroupFieldsData.Where(x => x.CodingFieldID == masterValue?.CodingFieldID))
+                        {
+                            if (CodingSection.CodingFieldID == masterValue?.CodingFieldID)
+                            {
+                                try
+                                {
+                                    if (Accounts.Any())
+                                    {
+                                        var taskproperty = typeof(EmployeeAccountDetails).GetProperty(CodingSection.CodingField);
+                                        Accounts.ForEach(account => taskproperty!.SetValue(account, string.Empty));                              
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine("ex: " + ex.Message );
+                                }
+                                CodingSection.Masters = new List<MasterTableData>();
+                            }
+                        }
+                    }
+
+                }
+            }
+        @* } *@
+        StateHasChanged();  
+        }
+        catch (Exception ex)
+        {
+
+         Console.WriteLine(ex.Message + "    -error    : " );
+        }   
+    }
+    private void ShowHideField(int CodingFieldID, List<int> masterID)
+    {
+        var codingSectionID = ProjectGroupFieldsData.Where(x => x.CodingFieldID == CodingFieldID).Select(v => v.CodingSectionID).ToList();
+        var parentFieldID = 0;
+        if(ShowHideList != null && ShowHideList.Count > 0 && masterID.Count > 0)
+        {
+            foreach(ShowHideFieldList showHideFieldList in ShowHideList)
+            {
+                foreach(ShowHideField showHideField in showHideFieldList.Fields)
+                {
+                    if(showHideField.CCMasterID == masterID[0] && showHideField.FieldID == CodingFieldID && showHideField.SectionID == codingSectionID[0])
+                    {
+                            parentFieldID = showHideField.RankNo;
+                    }
+                }
+            }
+            if(parentFieldID != 0)
+            {
+                foreach (var CodingSection in ProjectGroupFieldsData)
+                {
+                    if(CodingSection.CodingSectionID == codingSectionID[0])
+                    {
+                        CodingSection.ShowHideFlag = 1;
+                        if(CodingSection.IsMandatory == 1)
+                            CodingSection.IsMandatory = 2;
+                    }
+                }
+                foreach(ShowHideField showHideField in ShowHideList[parentFieldID - 1].Fields)
+                {
+                    if(ProjectGroupFieldsData.Any(x => x.CodingFieldID == showHideField.FieldID))
+                    {
+                        var codingSection = ProjectGroupFieldsData.First(x => x.CodingFieldID == showHideField.FieldID);
+                        codingSection.ShowHideFlag = 0;
+                        if(codingSection.IsMandatory == 2)
+                            codingSection.IsMandatory = 1;
+                    }
+                }
+            }
+        }
+    }
+    private MasterTableData GetMasterValue(string field, IEnumerable<MasterTableData> masters)
+    {
+        var property = typeof(EmployeeAccountDetails).GetProperty(field);
+        var value = property.GetValue(Accounts.First());
+        var codingFieldID = ProjectGroupFieldsData.Where(x => x.CodingField == field).Select(v => v.CodingFieldID).ToList();
+        if(codingFieldID.Count > 0 && value != null && value.ToString() != string.Empty)
+        {
+            var masterID = GetFieldValue(value.ToString(), codingFieldID[0]);                   
+            ShowHideField(codingFieldID[0], masterID);
+        }
+        if (value == null)
+        {
+            return null;
+        }
+        if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
+        {
+            var id = Convert.ToInt32(value);
+            var masterValue = masters.FirstOrDefault(master => master.MasterID == id);
+            return masters.FirstOrDefault(master => master.MasterID == id);
+        }
+        else if (property.PropertyType == typeof(string))
+        {
+            var masterValue = masters.FirstOrDefault(master => master.MasterValue.Equals(value?.ToString()));
+            return masters.FirstOrDefault(master => master.MasterValue.Equals(value?.ToString()));
+        }
+        else
+        {
+            Logger.LogError($"Invalid type for field. Field: {field}, Type: {property.PropertyType}");
+            return null;
+        }
+    }
+    private async Task OnMasterValueChanged(string field, int CodingFieldID, MasterTableData value)
+    {
+        editTransactionValidation.ClearError(field);
+        var property = typeof(EmployeeAccountDetails).GetProperty(field);
+        if(value != null)
+        {
+            this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid green !important");
+        }
+        else
+        {
+            this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid red !important");
+        }
+        
+        if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
+        {
+            foreach (var account in Accounts)
+            {
+                //Start - Show or Hide Fields
+                int index = lstDDFieldValue.FindIndex(x => x.FieldName == field);
+                if (index != -1)
+                {
+                    lstDDFieldValue[index].FieldValue =  value?.MasterValue;
+                }
+                else
+                {
+                    DropDownFieldValue ddfv = new DropDownFieldValue
+                    {
+                        FieldName = field,
+                        FieldValue = value?.MasterValue,
+                        DataType = "int"
+                    };
+                    lstDDFieldValue.Add(ddfv);
+                }
+                //End - Show or Hide Fields
+                property.SetValue(account, value?.MasterID ?? 0);
+            }
+        }
+        else if (property.PropertyType == typeof(string))
+        {
+            foreach (var account in Accounts)
+            {
+                //Start - Show or Hide Fields
+                int index = lstDDFieldValue.FindIndex(x => x.FieldName == field);
+                if (index != -1)
+                {
+                    lstDDFieldValue[index].FieldValue =  value?.MasterValue;
+                }
+                else
+                {
+                    DropDownFieldValue ddfv = new DropDownFieldValue
+                    {
+                        FieldName = field,
+                        FieldValue = value?.MasterValue,
+                        DataType = "string"
+                    };
+                    lstDDFieldValue.Add(ddfv);
+                }
+                //End - Show or Hide Fields
+                property.SetValue(account, value?.MasterValue);
+            }
+        }
+        else
+        {
+            Logger.LogError($"Invalid type for field. Field: {field}, Type: {property.PropertyType}");
+            return;
+        }
+        var masterID = GetFieldValue(value?.MasterValue, CodingFieldID);
+        ShowHideField(CodingFieldID, masterID);
+        await ApplyCascading(CodingFieldID, masterID);
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    private string GetDateTimeValue(string field)
+    {
+        var property = typeof(EmployeeAccountDetails).GetProperty(field);
+        var value = property.GetValue(Accounts.First());
+        if (value == null)
+        {
+            return string.Empty;
+        }
+        var isValid = DateTime.TryParse(value.ToString(), out DateTime retValue);
+        return retValue.ToString("yyyy-MM-dd", CultureInfo.CurrentCulture);
+    }
+
+    @* private string GetOneToManyBufferDateTimeValue(string field)
+    {
+        var value = typeof(EmployeeAccountDetails).GetProperty("BufferSections").GetValue(Accounts.First());
+        //var value = property.GetValue(Accounts.First());
+        if (value == null)
+        {
+            return string.Empty;
+        }
+        var isValid = DateTime.TryParse(value.ToString(), out DateTime retValue);
+        return retValue.ToString("yyyy-MM-dd", CultureInfo.CurrentCulture);
+    } *@
+
+    private async Task OnDateTimeValueChanged(string field, string text)
+    {
+        editTransactionValidation.ClearError(field);
+        if(TATDayConfigurationData.Count() > 0)
+        {
+            foreach(var TATFields in TATDayConfigurationData)
+            {
+                if(TATFields.DateField == field)
+                {
+                    ProjectGroupFieldsData.Where(exp => exp.CodingField == TATFields.TextField).ToList().ForEach(s => s.IsEditable = true);
+                    if(!string.IsNullOrEmpty(text) && DateTime.TryParse(text, out DateTime value))
+                    {
+                        DateTime selectedDate = Convert.ToDateTime(text).Date;
+                        var today = DateTime.Now.Date;
+                        var difference = selectedDate - today;
+                        var differenceDays = difference.Days;
+                        var differenceValue = differenceDays < 0 ? "T " + differenceDays : differenceDays > 0 ? "T + " + differenceDays : "T";
+                        await OnValueChanged(TATFields.TextField!, differenceValue);
+                    }
+                    else
+                    {
+                        ProjectGroupFieldsData.Where(exp => exp.CodingField == TATFields.TextField).ToList().ForEach(s => s.IsEditable = false);
+                        await OnValueChanged(TATFields.TextField!, string.Empty);
+                    }
+                }
+            }
+        }
+        var property = typeof(EmployeeAccountDetails).GetProperty(field);
+        if (property.PropertyType == typeof(string))
+        {
+             if (DateTime.TryParse(text, out DateTime value))
+            {
+                await OnValueChanged(field, value.ToString("MM/dd/yyyy", CultureInfo.CurrentCulture));
+            }
+            else
+            {
+                await OnValueChanged(field, string.Empty);
+            }
+        }
+        else if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
+        {
+            if(string.IsNullOrEmpty(text) && property.PropertyType == typeof(DateTime))
+            {
+                text = new DateTime().ToString();
+            }
+            if (DateTime.TryParse(text, out DateTime value))
+            {
+                foreach (var account in Accounts)
+                {
+                    property.SetValue(account, value);
+                }
+                await AccountsChanged.InvokeAsync(Accounts);
+            }
+            else
+            {
+                foreach (var account in Accounts)
+                {
+                    property.SetValue(account, null);
+                }
+                await AccountsChanged.InvokeAsync(Accounts);
+                editTransactionValidation.DisplayError(field, "The value selected may not be valid");
+            }
+        }
+        else
+        {
+            Logger.LogWarning($"This field may be configured with an invalid data type. Field: {field}, Type: {property.PropertyType}");
+            editTransactionValidation.DisplayError(field, "This field may be configured with an invalid data type");
+        }       
+    }
+
+    @* private async Task OnOneToManyBufferDateTimeValueChanged(string field, string text)
+    {
+        editTransactionValidation.ClearError(field);
+        var property = typeof(BufferSectionDetails).GetProperty(field);
+        if (property.PropertyType == typeof(string))
+        {
+            await OnValueChanged(field, text);
+        }
+        else if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
+        {
+            if (DateTime.TryParse(text, out DateTime value))
+            {
+                foreach (var account in Accounts)
+                {
+                    property.SetValue(account, value);
+                }
+                await AccountsChanged.InvokeAsync(Accounts);
+            }
+            else
+            {
+                editTransactionValidation.DisplayError(field, "The value selected may not be valid");
+            }
+        }
+        else
+        {
+            Logger.LogWarning($"This field may be configured with an invalid data type. Field: {field}, Type: {property.PropertyType}");
+            editTransactionValidation.DisplayError(field, "This field may be configured with an invalid data type");
+        }       
+    } *@
+
+    private Task OnTimeSheetChanged(List<EmployeeAccountDetails> account)
+    {
+        int taskId =  Accounts.FirstOrDefault()?.taskid ?? 0; 
+        int subtask = Accounts.FirstOrDefault()?.subtaskid ?? 0;
+        if (Accounts.Any() == true && IsTasks() && taskId > 0)
+        {
+            ApplyCascading(524,new List<int>() {taskId});
+        }
+
+        if (Accounts.Any() == true && IsSubTasks() && subtask > 0)
+        {
+            ApplyCascading( 525,new List<int>{subtask});
+        }
+
+        return Task.CompletedTask;
+    }
+    
+    private bool IsTasks()
+    {
+        if (CascadingItems.Any(x => x.FieldID1 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID2 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID3 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID4 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID5 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID6 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID7 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID8 == 524)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID9 == 524)){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }  
+
+    private bool IsSubTasks()
+    {
+        if (CascadingItems.Any(x => x.FieldID1 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID2 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID3 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID4 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID5 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID6 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID7 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID8 == 525)){
+            return true;
+        }
+        else if (CascadingItems.Any(x => x.FieldID9 == 525)){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }  
+
+    private async Task OnValueChanged(string field, string value)
+    {
+        try
+        {
+            value = value.Trim();
+            editTransactionValidation.ClearError(field);
+            var property = typeof(EmployeeAccountDetails).GetProperty(field);
+            if (string.IsNullOrEmpty(value))
+            {
+                foreach (var account in Accounts)
+                {
+                    property.SetValue(account, default);
+                }
+            }
+            else
+            {
+                var convertedValue = value.ConvertTo(property.PropertyType);
+                foreach (var account in Accounts)
+                {
+                    property.SetValue(account, convertedValue);
+                }
+            }
+            await AccountsChanged.InvokeAsync(Accounts);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.Message, ex);
+        }
+    }
+    
+    private async Task ChangeMandatoryBorderOnFocusIn(string field, string value)
+    {
+        try
+        {
+            this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid green !important");
+            await AccountsChanged.InvokeAsync(Accounts);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.Message, ex);
+        }
+    }
+    private async Task ChangeMandatoryBorderOnFocusOut(string field, string value)
+    {
+        try
+        {
+            if(string.IsNullOrEmpty(value))
+            {
+                this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid red !important");
+            }
+            else
+            {
+                this.ProjectGroupFieldsData.Where(fld => fld.CodingField == field && fld.IsMandatory == 1).ToList().ForEach(exp => exp.MandatoryBorder = "border: 1px solid green !important");
+            }
+            await AccountsChanged.InvokeAsync(Accounts);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.Message, ex);
+        }
+    }
+    private async Task OnTextAreaChanged(string field, object value)
+    {
+        var text = value?.ToString();
+        editTransactionValidation.ClearError(field);
+        var property = typeof(EmployeeAccountDetails)
+        .GetProperty(field);
+        foreach (var account in Accounts)
+        {
+            property.SetValue(account, text);
+        }
+        await AccountsChanged.InvokeAsync(Accounts);        
+    }
+    protected async Task OnConfirmationCanceledClicked()
+    {
+        editTransactionValidation.ClearErrors();
+        bool isvalid = await editTransactionValidation.ValidateModifyTransaction(Accounts, BufferSections, ProjectGroupFieldsData);       
+    }
+    private async Task ValidateReportingFields()
+    {
+        var AuthState = (AuthStateProvider)AuthProvider;
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        string apiURL = $"/EditProduction/GetFieldDataNew/ProjectGroupID/{projectGroup.ProjectGroupID}";
+        var ProjectGroupFieldsDataNew = await ApiHelper.GetUsingMsgPackAsync<ProjectGroupFieldsData[]>(apiURL, Http, AuthState.Token);
+        foreach (var field in ProjectGroupFieldsDataNew)
+        {
+            var property = typeof(EmployeeAccountDetails).GetProperty(field.CodingField);
+            if(property != null)
+            {
+                var value = property.GetValue(Accounts.First());
+                var masterID = GetFieldValue(value?.ToString(), ProjectGroupFieldsDataNew);
+                await ApplyCascading(field.CodingFieldID, masterID);
+            }
+        }
+    }
+    protected async Task OnCompletedAccounts(int status)
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            editTransactionValidation.ClearErrors();
+            bool isvalid = await editTransactionValidation.ValidateModifyTransaction(Accounts, BufferSections, ProjectGroupFieldsData);
+            this.screen = this.ScreenName == "SearchAndCode" ? "Search and Edit" : this.ScreenName == "EditPage" ? "Modify Employee Transaction" : this.ScreenName == "WorkAllocation" ? "Work Allocation" : "Employee Transaction";
+            if (isvalid)
+            {
+                var account = Accounts.First();
+
+                if(string.IsNullOrEmpty(account.ClientLogin))
+                {
+                    
+                    Toaster.Add("LCM Login Name fetch occurred! Contact Software Team!", MatToastType.Warning, screen);
+                    await OnResetAccount();
+                    DisplayLoading(false);
+                    return;
+                }
+
+                if(account.DOB != null)
+                {
+                    if(account.DOB.Value.Date > DateTime.Now.Date) 
+                    {
+                        Toaster.Add("Future date not allowed in DOB", MatToastType.Warning, screen);
+                        DisplayLoading(false);
+                        return;
+                    }
+                }
+                
+                if (status == 1)
+                {
+                    if (account.AccountStatusID == 2)
+                        account.AccountStatusID = 4;
+                    else if (account.AccountStatusID == 3)
+                        account.AccountStatusID = 4;
+                    else if (account.AccountStatusID == 1)
+                        account.AccountStatusID = 1;
+                    else if (account.AccountStatusID == 4)
+                        account.AccountStatusID = 4;
+                }
+
+                if (status == 2)
+                {
+                    if (account.AccountStatusID == 1)
+                        account.AccountStatusID = 2;
+                    else if (account.AccountStatusID == 2)
+                        account.AccountStatusID = 3;
+                    else if (account.AccountStatusID == 3)
+                        account.AccountStatusID = 3;
+                    else if (account.AccountStatusID == 4)
+                        account.AccountStatusID = 2;
+                }
+
+                account.SchemaName = schemaName;
+                if(this.ScreenName != "EditScreen")
+                {
+                    account.UpdatedBy = EmployeeID;
+                    account.ProjectGroupID = this.projectGroupID;
+                }
+                account.SubmittedFrom = this.ScreenName == "SearchAndCode" ? "Search and Edit Page" : this.ScreenName == "EditPage" ? "EditPage" : this.ScreenName == "WorkAllocation" ? "Work Allocation Page" : "SavePage";
+                TaskID = account.taskid;
+                SubTaskID = account.subtaskid;
+                
+                if(this.ScreenName == "EditScreen") {
+                    var result = await EditTransactionService.ModifyTransactionAsync(account);            
+
+                    if (result != null && result.ResultMessage == "Success")
+                    {
+                        Toaster.Add("Updated successfully", MatToastType.Success, screen);
+                        this.ButtonDisabled = true;
+                        await OnResetAccount();
+                    }
+                    else if (result != null && result.ResultMessage == "Fail")
+                    {
+                        foreach (Tuple<bool, string> msg in result.BusinessRuleMessage)
+                        {
+                            Toaster.Add(msg.Item2, MatToastType.Warning, screen);
+                        }
+                    }
+                    @* else
+                    {
+                        Toaster.Add("Update Failed", MatToastType.Danger, "Modify Production");
+                    } *@
+                }
+                if(this.ScreenName == "AddScreen" || this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation") {
+                    account.AccountStatusID = status;
+                    var result = await EditTransactionService.SaveAccounts(account);            
+                    if (result.ResultCode == 1)
+                    {
+                        Toaster.Add("Saved successfully", MatToastType.Success, screen); 
+                        this.ButtonDisabled = true;                        
+                        if(this.ScreenName == "AddScreen")
+                        {
+                            await RetainValuesForFields();
+                            return;
+                        }
+                        if(this.ScreenName == "WorkAllocation")
+                        {                                            
+                           await this.EditAccountDetails();
+                           return;
+                        }
+                        if(this.ScreenName == "SearchAndCode")
+                        {
+                            await OnResetAccount();
+                        }
+                    }
+                    if (result.ResultCode == -1)
+                    {
+                        Toaster.Add(result.ResultMessage, MatToastType.Danger, screen);
+                    }
+                    if (result != null && result.ResultMessage == "Fail")
+                    {
+                        foreach (Tuple<bool, string> msg in result.BusinessRuleMessage)
+                        {
+                            Toaster.Add(msg.Item2, MatToastType.Warning, screen);
+                        }
+                    }
+                    @* else
+                    {
+                        Toaster.Add("Update Failed", MatToastType.Danger, "Employee Transaction");
+                    } *@
+                }
+            }
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            Toaster.Add("Update Failed", MatToastType.Danger, screen);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    protected async Task OnUpdateSkipReason()
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            
+            if(this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation") {
+                
+                var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+
+                var account = Accounts.First();
+
+                var reasonModel = new SkipReasonModel {
+                    ProjectGroupID = projectGroup.ProjectGroupID,
+                    UploadID = account.UploadAccountID,
+                    EmployeeID = this.EmployeeID,
+                    SchemaName = projectGroup!.SchemaName
+                };
+                var result = await EditTransactionService.UpdateSkipReason(reasonModel);            
+                if (result.ResultCode == 1)
+                {
+                    Toaster.Add("Saved successfully", MatToastType.Success, screen); 
+                    this.ButtonDisabled = true;                        
+                    if(this.ScreenName == "AddScreen")
+                    {
+                        await RetainValuesForFields();
+                        return;
+                    }
+                    if(this.ScreenName == "WorkAllocation")
+                    {                                            
+                        @* await this.EditAccountDetails(); *@
+                        await OnResetAccount();
+                        return;
+                    }
+                    if(this.ScreenName == "SearchAndCode")
+                    {
+                        await OnResetAccount();
+                    }
+                }
+                if (result.ResultCode == -1)
+                {
+                    Toaster.Add(result.ResultMessage, MatToastType.Danger, screen);
+                }
+            }
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            Toaster.Add("Update Failed", MatToastType.Danger, screen);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+
+    }
+    private async Task OnResetAccount()
+    {
+        var timer = new Timer(new TimerCallback(_ =>
+        {
+            NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+        }), null, 4000, 4000);
+    }
+    public class DropDownFieldValue
+    {
+        public string FieldName {get;set;}
+        public string FieldValue {get;set;}
+        public string DataType{get;set;}
+    }
+    private async Task GetCascadingItems(int projectgroupId)
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            CascadingItems = await ApiHelper.GetUsingMsgPackAsync<CascadingItems[]>($"/EditTransaction/GetCascadingItems/ProjectGroupID/{projectgroupId}", Http, AuthState.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task GetShowHideList(int projectgroupId)
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var ShowHideListJSON = await ApiHelper.GetUsingMsgPackAsync<string>($"/EditTransaction/GetShowHideList/ProjectGroupID/{projectgroupId}", Http, AuthState.Token);
+            ShowHideList = JsonConvert.DeserializeObject<List<ShowHideFieldList>>(ShowHideListJSON);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private List<int> GetFieldValue(string value, int codingFieldID)
+    {
+        List<int> valuesList = new List<int>();
+        foreach (var CodingSection in ProjectGroupFieldsData.Where(x => x.CodingFieldID == codingFieldID))
+        {
+            if (CodingSection.Masters.Count() > 0)
+            {
+                if (CodingSection.Masters.Any(x => x.MasterValue == value))
+                    valuesList = CodingSection.Masters.Where(x => x.MasterValue == value).Select(v => v.MasterID).ToList();
+            }
+        }
+        return valuesList;
+    }
+    private List<int> GetFieldValue(string value, IEnumerable<ProjectGroupFieldsData> ProjectGroupFieldsDataNew)
+    {
+        List<int> valuesList = new List<int>();
+        foreach (var CodingSection in ProjectGroupFieldsDataNew)
+        {
+            if (CodingSection.Masters.Count() > 0)
+            {
+                if (CodingSection.Masters.Any(x => x.MasterValue == value))
+                    valuesList = CodingSection.Masters.Where(x => x.MasterValue == value).Select(v => v.MasterID).ToList();
+            }
+        }
+        return valuesList;
+    }
+    public  List<BufferSectionDetails> BufferSections = new List<BufferSectionDetails>();
+
+    private void AddBufferSections()
+    {
+        BufferSections.Add(new BufferSectionDetails());
+    }
+    public async Task UpdateBufferSections(string field, int i, string value, string InputControl)
+    {
+        editTransactionValidation.ClearError(field);
+        var property = typeof(BufferSectionDetails).GetProperty(field);
+        if(property.PropertyType == typeof(string) && InputControl == "Date")
+        {
+            if (DateTime.TryParse(value, out DateTime values))
+            {
+                property.SetValue(BufferSections[i], values.ToString("MM/dd/yyyy", CultureInfo.CurrentCulture));
+            }
+            else
+            {
+                property.SetValue(BufferSections[i], string.Empty);
+            }
+        }
+        else
+        {
+            property.SetValue(BufferSections[i], value);
+        }
+        var property1 = typeof(EmployeeAccountDetails).GetProperty("BufferSections");
+        foreach (var account in Accounts)
+        {
+            property1.SetValue(account, BufferSections);
+        }      
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    private string GetMasterValueBufferSections(int index, string codingField)
+    {
+        var value = typeof(EmployeeAccountDetails).GetProperty("BufferSections").GetValue(Accounts.First());
+        IList<BufferSectionDetails> collection = (IList<BufferSectionDetails>)value;
+        if(collection != null && collection.Count > 0 && index >= 0 && index < collection.Count)
+        {
+            var BufferSection = collection[index];            
+            var prop = BufferSection.GetType().GetProperty(codingField);
+            return prop.GetValue(BufferSection) == null ? string.Empty : prop.GetValue(BufferSection).ToString();
+        }
+        else
+            return string.Empty;
+    }
+
+    private string GetMasterValueDateBufferSections(int index, string codingField)
+    {
+        var value = typeof(EmployeeAccountDetails).GetProperty("BufferSections").GetValue(Accounts.First());
+        IList<BufferSectionDetails> collection = (IList<BufferSectionDetails>)value;
+        if(collection != null && collection.Count > 0 && index >= 0 && index < collection.Count)
+        {
+            var BufferSection = collection[index];            
+            var prop = BufferSection.GetType().GetProperty(codingField);
+            string dateValue = string.Empty;
+            if(prop!.GetValue(BufferSection) == null)
+            {
+                dateValue = string.Empty;
+            }
+            else
+            {
+                var isValid = DateTime.TryParse(prop.GetValue(BufferSection).ToString(), out DateTime retValue);
+                if(isValid)
+                {
+                    dateValue =  retValue.ToString("yyyy-MM-dd", CultureInfo.CurrentCulture);
+                }
+                else
+                {
+                    dateValue = prop.GetValue(BufferSection).ToString();
+                }
+                
+            }
+            return dateValue!;
+        }
+        else
+            return string.Empty;
+
+    }
+    private void RemoveBufferSections(int i)
+    {
+        BufferSections.RemoveAt(i);
+        Accounts.First().BufferSections = BufferSections;
+    }
+    private List<EMCodeDetails> EMCodes = new List<EMCodeDetails>(); 
+   
+
+    private void AddEMCodes()
+    {
+        EMCodes.Add(new EMCodeDetails());
+    }
+    public async Task UpdateEMCodes(string field, int i, string value)
+    {       
+        editTransactionValidation.ClearError(field);
+        var property = typeof(EMCodeDetails).GetProperty(field);
+        if(field == "Units")	
+        {	 
+            property.SetValue(EMCodes[i], value == DBNull.Value.ToString() ? null : (int?)Convert.ToInt32(value), null);            	
+        }	
+        else	
+        {	
+            property.SetValue(EMCodes[i], value);	
+        }
+        var property1 = typeof(EmployeeAccountDetails).GetProperty("EMCodes");
+        foreach (var account in Accounts)
+        {
+            property1.SetValue(account, EMCodes);
+        }      
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    private void RemoveEMCodes(int i)
+    { 
+        EMCodes.RemoveAt(i);
+        Accounts.First().EMCodes = EMCodes;
+    }
+    private string GetMasterValueEMCode(int index, string codingField)
+    {
+        var value = typeof(EmployeeAccountDetails).GetProperty("EMCodes").GetValue(Accounts.First());
+        IList<EMCodeDetails> collection = (IList<EMCodeDetails>)value;
+        if(collection != null && collection.Count > 0 && index >= 0 && index < collection.Count)
+        {
+            var emcode = collection[index];            
+            var prop = emcode.GetType().GetProperty(codingField);
+            return prop.GetValue(emcode) == null ? string.Empty : prop.GetValue(emcode).ToString();
+        }
+        else
+            return string.Empty;
+    }
+    private string GetMasterValueDateEMCode(int index, string codingField)
+    {
+        var value = typeof(EmployeeAccountDetails).GetProperty("EMCodes").GetValue(Accounts.First());
+        IList<EMCodeDetails> collection = (IList<EMCodeDetails>)value;
+        if(collection != null && collection.Count > 0 && index >= 0 && index < collection.Count)
+        {
+            var emcode = collection[index];            
+            var prop = emcode.GetType().GetProperty(codingField);
+            string dateValue = string.Empty;
+            if(prop!.GetValue(emcode) == null)
+            {
+                dateValue = string.Empty;
+            }
+            else
+            {
+                var isValid = DateTime.TryParse(prop!.GetValue(emcode).ToString(), out DateTime retValue);
+                if(isValid)
+                {
+                    dateValue =  retValue.ToString("yyyy-MM-dd", CultureInfo.CurrentCulture);
+                }
+                else
+                {
+                    dateValue = prop!.GetValue(emcode).ToString();
+                }                
+            }
+            return dateValue!;
+            //return prop.GetValue(emcode) == null ? string.Empty : prop.GetValue(emcode).ToString();
+        }
+        else
+            return string.Empty;
+    }
+    public void CheckboxClicked(bool checkedValue)
+    {  
+        this.IsShowEMCode = checkedValue;
+    }
+    private async void Open()
+    {
+        NavigationManager.NavigateTo(RedirectURL, forceLoad: true);
+    }
+    private async void Cancel()
+    {
+        modal.Close();
+    }
+    private async Task CallMethodRedirectQMS()
+    {
+        var AuthState = (AuthStateProvider)AuthProvider;
+        string apiURL = $"EditProduction/GetPendingAccountdetailsForce/EmployeeID/{EmployeeID}";
+        string response = await ApiHelper.GetUsingMsgPackAsync<string>(apiURL, Http, AuthState.Token);
+        if(!string.IsNullOrEmpty(response))
+        {
+            var QCRework = JsonConvert.DeserializeObject<List<QCReworkConfiguration>>(response);
+            if (QCRework[0].IsForce == "Y" && QCRework[0].PendingCount > 0) 
+            {
+                PendingMessage = QCRework[0].PendingMessage;
+                RedirectURL = QCRework[0].RedirectURL;
+                modal.Open();
+            }
+        }
+    }
+    private async Task RetainValuesForFields()
+    {
+        var AuthState = (AuthStateProvider)AuthProvider;
+        var projectGroup = await LocalStorageService!.GetAsync<NexgenProjectGroups>();
+        string apiURL = $"/Production/GetRetainValuesField/ProjectGroupID/{projectGroup.ProjectGroupID}";
+        var RetainValueFields = await ApiHelper.GetUsingMsgPackAsync<IEnumerable<WorkAllocationPlacementFieldMapping>>(apiURL,Http,AuthState.Token);
+        var account = Accounts.First();
+        foreach (var prop in typeof(EmployeeAccountDetails).GetProperties())
+        {
+            if(!RetainValueFields.Any(exp => exp.Field == prop.Name))
+            {
+                if(prop.Name != "task" && prop.Name != "subtask" && prop.Name != "SubClient" 
+                && prop.Name != "Software" && prop.Name != "BillableGroup" && prop.Name != "ClientLogin"
+                && prop.Name != "SubClientID" && prop.Name != "BillableGroupID" && prop.Name != "SoftwareID"
+                && prop.Name != "taskid" && prop.Name != "subtaskid" && prop.Name != "ProjectGroupID" 
+                && prop.Name != "UpdatedBy")
+                {
+                    prop.SetValue(account, null);
+                }
+            }
+        }
+        ProjectGroupFieldsData = Enumerable.Empty<ProjectGroupFieldsData>();
+        CascadingItems = Enumerable.Empty<CascadingItems>();
+        ShowHideList = new List<ShowHideFieldList>();
+        TATDayConfigurationData = Enumerable.Empty<TATDayConfiguration>();
+        this.ClearBufferSections();
+        this.ClearEMCodes();
+        await this.GetProjectGroupFieldsData(projectGroupID);
+        await this.GetCascadingItems(projectGroupID);
+        await this.GetShowHideList(projectGroupID);
+        await this.GetTATDayConfiguration(projectGroupID);
+        DisplayLoading(false);
+    }
+    public void ClearBufferSections()
+    {
+        for(int i = 0; i < BufferSections.Count; i++)
+        {
+            BufferSections.RemoveAt(i);
+        }
+        BufferSections.Add(new BufferSectionDetails());
+    }
+    public void ClearEMCodes()
+    {
+        for(int i = 0; i < EMCodes.Count; i++)
+        {
+            EMCodes.RemoveAt(i);
+        }
+        EMCodes.Add(new EMCodeDetails());
+    }
+    public async Task EditAccountDetails()
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            ProjectGroupFieldsData = Enumerable.Empty<ProjectGroupFieldsData>();
+            CascadingItems = Enumerable.Empty<CascadingItems>();
+            ShowHideList = new List<ShowHideFieldList>();
+            TATDayConfigurationData = Enumerable.Empty<TATDayConfiguration>();
+            await this.GetProjectGroupFieldsData(projectGroupID);
+            await this.GetCascadingItems(projectGroupID);
+            await this.GetShowHideList(projectGroupID);
+            await this.GetTATDayConfiguration(projectGroupID);
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var user = await LocalStorageService!.GetAsync<AuthenticatedUser>();
+            var EmployeeID = user!.EmployeeId;
+            @* bool retainTask = false;
+            int taskID = 0; 
+            int subtaskID = 0; *@
+
+            await GetCodingFieldTypes();
+            if(!FieldTypes.Any(exp => exp.FieldType == "WorkAllocation Page"))
+            {
+                Toaster.Add("Access Denied For Allocation Page", MatToastType.Danger, "Work Allocation");
+                DisplayLoading(false);
+                return;
+            }
+
+            string apiURL = $"WorkAllocation/GetWorkAllocations/ProjectGroupID/{projectGroup.ProjectGroupID}/EmployeeID/{EmployeeID}/SchemaName/{this.schemaName}";
+            var AccountDetailData = await ApiHelper.GetUsingMsgPackAsync<WorkAllocationAccounts[]>(apiURL, Http, AuthState.Token);
+
+            if(AccountDetailData.Count() == 0)
+            {
+                Toaster.Add("No Accounts Available", MatToastType.Danger, "Work Allocation");
+                await OnResetAccount();
+                DisplayLoading(false);
+                return;
+            }
+
+            if (AccountDetailData[0]!.AllocatedAccounts!.Count() == 0)
+            {
+                Toaster.Add("You have Already Fetched the other Account.!", MatToastType.Danger, "Search and Code");
+            }
+
+            if (AccountDetailData[0]!.AllocatedAccounts!.Count() > 0)
+            {
+                var Accounts = AccountDetailData[0]!.AllocatedAccounts!.ToList();                   
+                this.Accounts = new List<EmployeeAccountDetails>();
+                var accModel = Accounts!.FirstOrDefault()!;
+                this.SubClientName = accModel.SubClient;
+                this.SoftwareName = accModel.Software;
+                this.BillableGroupName = accModel.BillableGroup;
+                this.SelectedSubClient = accModel.SubClient;
+                this.SelectedSoftware = accModel.Software;
+                this.SelectedBillableGroup = accModel.BillableGroup;
+                if(string.IsNullOrEmpty(accModel.task) || accModel.task == "0")
+                {
+                    accModel.task = this.TaskID.ToString();
+                    accModel.subtask = this.SubTaskID.ToString();
+                    @* retainTask = true;
+                    taskID = this.TaskID;
+                    subtaskID = this.SubTaskID; *@
+                }
+
+                this.Accounts.Add(accModel);                   
+            }
+            if (AccountDetailData[0]!.EditableFields!.Count() > 0)
+            {
+                this.IsBillableGroupDisable = AccountDetailData[0]!.EditableFields!.Any(exp => exp.CodingField == "BillableGroupID" && exp.IsEditable == true);
+                this.IsSubClientDisable = AccountDetailData[0]!.EditableFields!.Any(exp => exp.CodingField == "SubClientID" && exp.IsEditable == true);
+                this.IsSoftwareDisable = AccountDetailData[0]!.EditableFields!.Any(exp => exp.CodingField == "SubClientID" && exp.IsEditable == true);
+                this.IsTask = AccountDetailData[0]!.EditableFields!.Any(exp => exp.CodingField == "Task" && exp.IsEditable == true);
+                this.IsSubTask = AccountDetailData[0]!.EditableFields!.Any(exp => exp.CodingField == "SubTask" && exp.IsEditable == true);
+                this.EditableCodingFields = AccountDetailData[0]!.EditableFields!.ToList();
+            }
+            if(this.EditableCodingFields != null && this.EditableCodingFields.Count > 0)
+            {
+                this.ProjectGroupFieldsData = this.ProjectGroupFieldsData.
+                                    Select(fields => {
+                                            var fieldData = fields;
+                                            var isEditFields = this.EditableCodingFields.Any(exp => exp.CodingField == fields.CodingField && exp.IsEditable == true);
+                                            fieldData.IsEditable = isEditFields;
+                                            return fieldData;
+                                    }).ToList();
+            }
+            await FetchProjectGroupSubClient();  
+
+            @* if (retainTask)
+            {
+                var taskModel = dsTaskData.Where(exp => exp.TaskID == taskID).FirstOrDefault();
+                await UpdateTaskInAccountModel(taskModel!);
+                var subTaskModel = dsSubTaskData.Where(exp => exp.SubTaskID == subtaskID).FirstOrDefault();
+                await UpdateSubTaskInAccountModel(subTaskModel);
+            }*@
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            Toaster.Add("No Accounts Available", MatToastType.Danger, "Work Allocation");
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task GetCodingFieldTypes()
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService!.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider!;
+            FieldTypes = await
+            ApiHelper.GetUsingMsgPackAsync<CodingFieldTypes[]>($"/EditTransaction/GetCodingFieldTypes/ProjectGroupID/{projectGroup.ProjectGroupID}",
+            Http,
+            AuthState!.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);               
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    ///Time Sheet Part
+    private async Task FetchProjectGroupSubClient()
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsSubClientData = await
+            ApiHelper.GetUsingMsgPackAsync<GetProjectGroupSubClientsResult[]>($"/EditProduction/GetProjectGroupSubClients/ProjectGroupID/{projectGroup.ProjectGroupID}/EmployeeID/{EmployeeID}",
+            Http, AuthState.Token);
+            
+            subClientProperty.Clear();
+            subClientProperty = new List<Tuple<PropertyInfo, string>>();
+            
+            var type = typeof(GetProjectGroupSubClientsResult);
+            foreach (var item in dsSubClientData)
+            {
+                //this.SubClientID = item.SubClientID;
+                subClientProperty.Add(Tuple.Create(type.GetProperty(item.SubClient), item.SubClient));
+            };
+                    if(dsSubClientData.Any(exp => exp.SubClient == SelectedSubClient))
+                    {   
+                        var subClientModel = dsSubClientData.Where(exp => exp.SubClient == SelectedSubClient).FirstOrDefault();
+                        if(subClientModel != null)
+                        {
+                           await this.UpdateSubClientInAccountModel(subClientModel);
+                        }
+                    }
+                    else
+                    {
+                        var model = dsSubClientData!.FirstOrDefault()!;
+                        await this.UpdateSubClientInAccountModel(model);
+                    }
+           // await FetchLCMClientLoginDetails();
+           DisplayLoading(false);
+           
+            
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task UpdateSubClientInAccountModel(GetProjectGroupSubClientsResult model)
+    {
+        var SubClientID_Property = typeof(EmployeeAccountDetails).GetProperty("SubClientID");
+        Accounts.ForEach(account => SubClientID_Property!.SetValue(account, model!.SubClientID));
+        var SubClient_Property = typeof(EmployeeAccountDetails).GetProperty("SubClient");
+        Accounts.ForEach(account => SubClient_Property!.SetValue(account, model!.SubClient));
+        this.SubClientID = model!.SubClientID;
+        this.SubClientName = model.SubClient;
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.SubClientID = SubClientID;
+        timeSheetData.SubClient = SubClientName;
+        await LocalStorageService.SetAsync(timeSheetData);
+        StateHasChanged();
+        await FetchSoftwareData(this.SubClientID);
+        await FetchLCMClientLoginDetails(); 
+        StateHasChanged();
+    }
+    private async Task FetchLCMClientLoginDetails()
+    {
+        try
+        {
+             DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsClientLogin = await
+            ApiHelper.GetUsingMsgPackAsync<SoftwareUserLoginAccess[]>($"/EditProduction/GetLCMClientLoginDetails/EmployeeID/{EmployeeID}/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{SubClientID}",
+            Http, AuthState.Token);
+           
+            clientLoginProperty.Clear();
+            clientLoginProperty = new List<Tuple<PropertyInfo, string>>();
+            
+            var type = typeof(SoftwareUserLoginAccess);
+            foreach (var item in dsClientLogin)
+            {
+                clientLoginProperty.Add(Tuple.Create(type.GetProperty(item.ClientLogin), item.ClientLogin));
+            };
+            
+                var editAccount = Accounts.FirstOrDefault();
+                    if(editAccount != null && dsClientLogin.Any(exp => exp.ClientLogin == editAccount.ClientLogin))
+                    {
+                        var clientLoginModel = dsClientLogin.Where(exp => exp.ClientLogin == editAccount.ClientLogin).FirstOrDefault();
+                        await UpdateClientLoginInAccountModel(clientLoginModel!);
+                    }
+                    else if(dsClientLogin.Any(exp => exp.ClientLogin == SelectedClientLogin))
+                    {
+                        var clientLoginModel = dsClientLogin.Where(exp => exp.ClientLogin == SelectedClientLogin).FirstOrDefault();
+                        await UpdateClientLoginInAccountModel(clientLoginModel!);
+                    }
+                    else
+                    {
+                        var model = dsClientLogin!.FirstOrDefault()!;
+                        await UpdateClientLoginInAccountModel(model);
+                    }
+            DisplayLoading(false);
+           // await FetchSoftwareData(SubClientID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+             DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task UpdateClientLoginInAccountModel(SoftwareUserLoginAccess model)
+    {
+        var clProperty = typeof(EmployeeAccountDetails).GetProperty("ClientLogin");
+        Accounts.ForEach(account => clProperty!.SetValue(account, model.ClientLogin));
+        this.StateHasChanged();
+        ClientLogin = model.ClientLogin;
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.ClientLogin = ClientLogin;
+        await LocalStorageService.SetAsync(timeSheetData);
+    }
+    private async Task FetchSoftwareData(int subClientId)
+    {
+        try
+        {
+             DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider;
+            dsSoftwareData = await
+            ApiHelper.GetUsingMsgPackAsync<GetSoftwareResult[]>($"/EditProduction/GetSoftwareData/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{subClientId}/EmployeeID/{EmployeeID}",
+            Http, AuthState.Token);
+            
+            softwareProperty.Clear();
+            softwareProperty = new List<Tuple<PropertyInfo, string>>();
+            
+            var type = typeof(GetSoftwareResult);
+            foreach (var item in dsSoftwareData)
+            {
+                softwareProperty.Add(Tuple.Create(type.GetProperty(item.Software), item.Software));
+            };
+           
+                    Console.WriteLine("TimeSheetSoftware " + SelectedSoftware);
+                    if(dsSoftwareData.Any(exp => exp.Software == SelectedSoftware))
+                    {
+                        var softwareModel = dsSoftwareData.Where(exp => exp.Software == SelectedSoftware).FirstOrDefault();
+                        await UpdateSoftwareInAccountModel(softwareModel!);
+                    }
+                    else
+                    {
+                        var model = dsSoftwareData!.FirstOrDefault()!;
+                        await UpdateSoftwareInAccountModel(model);
+                    }
+                
+             DisplayLoading(false);
+            await FetchBillableGroupData(SubClientID, SoftwareID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+             DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task UpdateSoftwareInAccountModel(GetSoftwareResult model)
+    {       
+        var Software_Property = typeof(EmployeeAccountDetails).GetProperty("Software");
+        Accounts.ForEach(account => Software_Property!.SetValue(account, model.Software));
+        var SoftwareID_Property = typeof(EmployeeAccountDetails).GetProperty("SoftwareID");
+        Accounts.ForEach(account => SoftwareID_Property!.SetValue(account, model.SoftwareID));     
+        this.StateHasChanged();   
+        this.SoftwareID = model!.SoftwareID;
+        this.SoftwareName = model.Software;
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.SoftwareID = SoftwareID;
+        timeSheetData.Software = SoftwareName;
+        await LocalStorageService.SetAsync(timeSheetData);
+    }
+    private async Task FetchBillableGroupData(int subClientId, int softwareId)
+    {
+        try
+        {
+             DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsBillableGroupData = await
+            ApiHelper.GetUsingMsgPackAsync<GetBillableGroupResult[]>($"/EditProduction/GetBillableGroupData/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{subClientId}/EmployeeID/{EmployeeID}/SoftwareID/{softwareId}",
+            Http, AuthState.Token);
+            
+            billableGroupProperty.Clear();
+            billableGroupProperty = new List<Tuple<PropertyInfo, string>>();
+           
+            var type = typeof(GetBillableGroupResult);
+            foreach (var item in dsBillableGroupData)
+            {
+                billableGroupProperty.Add(Tuple.Create(type.GetProperty(item.BillableGroup), item.BillableGroup));
+            };
+
+                    Console.WriteLine("TimeSheetBillableGroup " + SelectedBillableGroup);
+                    if(dsBillableGroupData.Any(exp => exp.BillableGroup == SelectedBillableGroup))
+                    {
+                        var billableGroupModel = dsBillableGroupData.Where(exp => exp.BillableGroup == SelectedBillableGroup).FirstOrDefault();
+                        await UpdateBillableGroupInAccountModel(billableGroupModel!);
+                    }
+                    else
+                    {
+                        var model = dsBillableGroupData!.FirstOrDefault()!;
+                        await UpdateBillableGroupInAccountModel(model);
+                    }
+             DisplayLoading(false);
+            await FetchTaskData(subClientId, softwareId, BillableGroupID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+             DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task UpdateBillableGroupInAccountModel(GetBillableGroupResult model)
+    {        
+        var BillableGroup_Property = typeof(EmployeeAccountDetails).GetProperty("BillableGroup");
+        Accounts.ForEach(account => BillableGroup_Property!.SetValue(account, model.BillableGroup));
+        var BillableGroupID_Property = typeof(EmployeeAccountDetails).GetProperty("BillableGroupID");
+        Accounts.ForEach(account => BillableGroupID_Property!.SetValue(account, model.BillableGroupID));
+        this.StateHasChanged();
+        this.BillableGroupID = model!.BillableGroupID;
+        this.BillableGroupName = model.BillableGroup;
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.BillableGroupID = BillableGroupID;
+        timeSheetData.BillableGroup = BillableGroupName;
+        await LocalStorageService.SetAsync(timeSheetData);
+    }
+    private async Task FetchTaskData(int subClientId, int softwareId, int billableGroupId)
+    {
+        try
+        {
+             DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsTaskData = await
+            ApiHelper.GetUsingMsgPackAsync<GetTaskResult[]>($"/EditProduction/GetTaskData/ProjectGroupID/{projectGroup.ProjectGroupID}/SubClientID/{subClientId}/BillableGroupID/{billableGroupId}/SoftwareID/{softwareId}",
+            Http, AuthState.Token);
+            taskProperty.Clear();
+            taskProperty = new List<Tuple<int, string>>();
+            var type = typeof(GetTaskResult);
+            foreach (var item in dsTaskData)
+            {
+                taskProperty.Add(Tuple.Create(item.TaskID, item.CodingStatus));
+                //TaskID = item.TaskID;
+            };
+
+                var editAccount = Accounts.FirstOrDefault();
+                    if(editAccount != null && dsTaskData.Any(exp => exp.CodingStatus == editAccount.task) && this.ScreenName == "EditScreen")
+                    {
+                        var taskModel = dsTaskData.Where(exp => exp.CodingStatus == editAccount.task).FirstOrDefault();
+                        await UpdateTaskInAccountModel(taskModel!);
+                    }
+                    else if(editAccount != null && dsTaskData.Any(exp => exp.TaskID.ToString() == editAccount.task) && (this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation"))
+                    {
+                        var taskModel = dsTaskData.Where(exp => exp.TaskID.ToString() == editAccount.task).FirstOrDefault();
+                        await UpdateTaskInAccountModel(taskModel!);
+                    }
+                    else if(this.TaskID > 0 && dsTaskData.Any(exp => exp.TaskID == this.TaskID)) {
+                        var taskModel = dsTaskData.Where(exp => exp.TaskID == this.TaskID).FirstOrDefault();
+                        await UpdateTaskInAccountModel(taskModel!);
+                    }
+                    else
+                    {
+                       var model = dsTaskData!.FirstOrDefault()!;
+                       Console.WriteLine(model?.CodingStatus + " model.CodingStatus");
+                       await UpdateTaskInAccountModel(model);
+                    }
+             DisplayLoading(false);
+            await FetchSubTaskData(subClientId, softwareId, billableGroupId, TaskID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+             DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task UpdateTaskInAccountModel(GetTaskResult model)
+    {      
+        var Task_Property = typeof(EmployeeAccountDetails).GetProperty("task");
+        Accounts.ForEach(account => Task_Property!.SetValue(account, model.CodingStatus));
+        var TaskID_Property = typeof(EmployeeAccountDetails).GetProperty("taskid");
+        Accounts.ForEach(account => TaskID_Property!.SetValue(account, model.TaskID));
+        this.StateHasChanged();
+        this.TaskID = model!.TaskID;
+        this.TaskName = model!.CodingStatus;
+        await AccountsChanged.InvokeAsync(Accounts);
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.TaskID = TaskID;
+        timeSheetData.Task = TaskName;
+        await LocalStorageService.SetAsync(timeSheetData);
+    }
+    public async Task OnTaskChanged(ChangeEventArgs args)
+    {
+        TaskID = Convert.ToInt16(args.Value); 
+        string? Task = dsTaskData.Where(e=>e.TaskID == TaskID).Select(exp => exp.CodingStatus).FirstOrDefault();     
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("taskid");
+        var taskProperty = typeof(EmployeeAccountDetails).GetProperty("task");
+        Accounts.ForEach(account => property!.SetValue(account, TaskID));
+        Accounts.ForEach(account => taskProperty!.SetValue(account, Task));
+        Accounts.ToList()[0].InternalTarget = Convert.ToDecimal(lblTarget);
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.TaskID = TaskID;
+        timeSheetData.Task = Task;
+        timeSheetData.InternalTarget = Convert.ToDecimal(lblTarget);
+        
+
+        if(this.ScreenName == "EditScreen")
+        {
+            var sbtproperty = typeof(EmployeeAccountDetails).GetProperty("subtaskid");
+            var SubTaskProperty = typeof(EmployeeAccountDetails).GetProperty("subtask");
+            Accounts.ForEach(account => sbtproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => SubTaskProperty!.SetValue(account, string.Empty));
+            Accounts.ToList()[0].InternalTarget = Convert.ToDecimal("0");  
+            lblTarget = string.Empty;
+            LabelTarget = string.Empty; 
+            timeSheetData.SubTaskID = 0;
+            timeSheetData.SubTask = String.Empty;
+            timeSheetData.InternalTarget = 0;
+        }
+
+        await LocalStorageService.SetAsync(timeSheetData);
+        await FetchSubTaskData(SubClientID, SoftwareID, BillableGroupID, TaskID);
+        await AccountsChanged.InvokeAsync(Accounts);
+        await OnTimeSheetChanged(Accounts);
+        StateHasChanged();
+    }
+    private async Task FetchSubTaskData(int subClientId, int softwareId, int billableGroupId, int taskId)
+    {
+        try
+        {
+             DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsSubTaskData = await
+            ApiHelper.GetUsingMsgPackAsync<GetSubTaskResult[]>($"/EditProduction/GetSubTaskData/ProjectGroupID/{projectGroup.ProjectGroupID}/BillableGroupID/{billableGroupId}/TaskID/{taskId}/SubClientID/{subClientId}/SoftwareID/{softwareId}",
+            Http, AuthState.Token);
+            
+            StateHasChanged();
+            subTaskProperty.Clear();
+            subTaskProperty = new List<Tuple<int, string>>();
+            var type = typeof(GetSubTaskResult);
+            foreach (var item in dsSubTaskData)
+            {
+                subTaskProperty.Add(Tuple.Create(item.SubTaskID, item.SubTask));
+            };
+            lblTarget = Convert.ToString(dsSubTaskData[0].InternalTarget);
+            LabelTarget = Convert.ToString(dsSubTaskData[0].InternalTarget) + "%";
+
+            if(dsSubTaskData.Count() == 0)
+            {
+                lblTarget = string.Empty;
+                LabelTarget = string.Empty;
+            }
+           
+                var editAccount = Accounts.FirstOrDefault();  
+                    if(editAccount != null && dsSubTaskData.Any(exp => exp.SubTaskID == editAccount.subtaskid) && this.ScreenName == "EditScreen")
+                    {
+                        var subTaskModel = dsSubTaskData.Where(exp => exp.SubTaskID == editAccount.subtaskid).FirstOrDefault();
+                        await UpdateSubTaskInAccountModel(subTaskModel);
+                    }
+                    else if(editAccount != null && dsSubTaskData.Any(exp => exp.SubTaskID.ToString() == editAccount.subtask) && (this.ScreenName == "SearchAndCode" || this.ScreenName == "WorkAllocation"))
+                    {
+                        var subTaskModel = dsSubTaskData.Where(exp => exp.SubTaskID.ToString() == editAccount.subtask).FirstOrDefault();
+                        await UpdateSubTaskInAccountModel(subTaskModel);
+                    }
+                    else if(SubTaskID > 0 && dsSubTaskData.Any(exp => exp.SubTaskID == this.SubTaskID)) 
+                    {
+                        var model = dsSubTaskData.Where(exp => exp.SubTaskID == this.SubTaskID).FirstOrDefault()!;
+                        await UpdateSubTaskInAccountModel(model);
+                    }
+                    else
+                    {
+                        var model = dsSubTaskData!.FirstOrDefault()!;
+                        await UpdateSubTaskInAccountModel(model);
+                    }
+                    var internalTarget  = dsSubTaskData.Where(e => e.SubTaskID == SubTaskID).FirstOrDefault();
+                    if(internalTarget != null)
+                    {
+                        Accounts.ToList()[0].InternalTarget = Convert.ToDecimal(internalTarget.InternalTarget);  
+                        lblTarget = Convert.ToString(internalTarget.InternalTarget);   
+                        LabelTarget = Convert.ToString(internalTarget.InternalTarget) + "%";  
+                        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+                        timeSheetData.InternalTarget =  Convert.ToDecimal(lblTarget);
+                        await LocalStorageService.SetAsync(timeSheetData);
+                    }
+                    
+            if(this.ScreenName == "EditScreen")
+            {
+                await FetchStatusData();
+            } 
+           
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+             DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task UpdateSubTaskInAccountModel(GetSubTaskResult model)
+    {        
+        var SubTask_Property = typeof(EmployeeAccountDetails).GetProperty("subtask");
+        Accounts.ForEach(account => SubTask_Property!.SetValue(account, model.SubTask));
+        var SubTaskID_Property = typeof(EmployeeAccountDetails).GetProperty("subtaskid");
+        Accounts.ForEach(account => SubTaskID_Property!.SetValue(account, model.SubTaskID));    
+        this.StateHasChanged();
+        this.SubTaskID = model!.SubTaskID;
+        this.SubTaskName = model!.SubTask;
+        await AccountsChanged.InvokeAsync(Accounts);
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.SubTaskID = SubTaskID;
+        timeSheetData.SubTask = SubTaskName;
+        timeSheetData.InternalTarget =  Convert.ToDecimal(lblTarget);
+        await LocalStorageService.SetAsync(timeSheetData);
+    }
+    public async Task OnSubTaskChanged(ChangeEventArgs args)
+    {
+        SubTaskID = Convert.ToInt16(args.Value);    
+        this.SubTaskID = SubTaskID;    
+        string? SubTask = dsSubTaskData.Where(e=>e.SubTaskID == SubTaskID).Select(exp => exp.SubTask).FirstOrDefault();
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("subtaskid");
+        Accounts.ForEach(account => property!.SetValue(account, SubTaskID));
+        var SubTaskProperty = typeof(EmployeeAccountDetails).GetProperty("subtask");
+        Accounts.ForEach(account => SubTaskProperty!.SetValue(account, SubTask));
+        var internalTarget  = dsSubTaskData.Where(e => e.SubTaskID == SubTaskID).FirstOrDefault();
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.SubTaskID = SubTaskID;
+        timeSheetData.SubTask = SubTask;
+        if(internalTarget != null)
+        {
+            Accounts.ToList()[0].InternalTarget = Convert.ToDecimal(internalTarget.InternalTarget);  
+            lblTarget = Convert.ToString(internalTarget.InternalTarget);   
+            LabelTarget = Convert.ToString(internalTarget.InternalTarget) + "%";  
+        }
+        timeSheetData.InternalTarget =  Convert.ToDecimal(lblTarget);
+        await LocalStorageService.SetAsync(timeSheetData);
+        await AccountsChanged.InvokeAsync(Accounts);
+        await OnTimeSheetChanged(Accounts);
+        StateHasChanged();
+    }
+    public async Task OnSubClientChanged(ChangeEventArgs args)
+    {
+        SubClientName = args!.Value!.ToString()!;
+        SubClientID = dsSubClientData.Where(exp => exp.SubClient == SubClientName).Select(ex => ex.SubClientID).FirstOrDefault();
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+
+        if(this.ScreenName == "EditScreen")
+        {
+            var sftproperty = typeof(EmployeeAccountDetails).GetProperty("SoftwareID");
+            var softwareProperty = typeof(EmployeeAccountDetails).GetProperty("Software");
+            Accounts.ForEach(account => sftproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => softwareProperty!.SetValue(account, string.Empty));
+            timeSheetData.SoftwareID = 0;
+            timeSheetData.Software = string.Empty;
+        }
+
+        await FetchSoftwareData(SubClientID);
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("SubClientID");
+        Accounts.ForEach(account => property!.SetValue(account, SubClientID));
+        var SubClientProperty = typeof(EmployeeAccountDetails).GetProperty("SubClient");
+        Accounts.ForEach(account => SubClientProperty!.SetValue(account, SubClientName));
+        timeSheetData.SubClientID = SubClientID;
+        timeSheetData.SubClient = SubClientName;
+        await LocalStorageService.SetAsync(timeSheetData);
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    
+    public async Task OnSoftwareChanged(ChangeEventArgs args)
+    {
+        SoftwareName = args!.Value!.ToString()!;
+        SoftwareID = dsSoftwareData.Where(exp => exp.Software == SoftwareName).Select(ex => ex.SoftwareID).FirstOrDefault();
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        if(this.ScreenName == "EditScreen")
+        {
+            var sftproperty = typeof(EmployeeAccountDetails).GetProperty("BillableGroupID");
+            var softwareProperty = typeof(EmployeeAccountDetails).GetProperty("BillableGroup");
+            Accounts.ForEach(account => sftproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => softwareProperty!.SetValue(account, string.Empty));
+            timeSheetData.BillableGroupID = 0;
+            timeSheetData.BillableGroup = string.Empty;
+        }
+
+        await FetchBillableGroupData(SubClientID, SoftwareID);
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("SoftwareID");
+        Accounts.ForEach(account => property!.SetValue(account, SoftwareID));
+        var SoftwareProperty = typeof(EmployeeAccountDetails).GetProperty("Software");
+        Accounts.ForEach(account => SoftwareProperty!.SetValue(account, SoftwareName));
+        timeSheetData.SoftwareID = SoftwareID;
+        timeSheetData.Software = SoftwareName;
+        await LocalStorageService.SetAsync(timeSheetData);
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    public async Task OnBillableGroupChanged(ChangeEventArgs args)
+    {
+        BillableGroupName = args!.Value!.ToString()!;
+        BillableGroupID = dsBillableGroupData.Where(exp => exp.BillableGroup == BillableGroupName).Select(ex => ex.BillableGroupID).FirstOrDefault();
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+
+        if(this.ScreenName == "EditScreen")
+        {
+            var tskproperty = typeof(EmployeeAccountDetails).GetProperty("taskid");
+            var taskProperty = typeof(EmployeeAccountDetails).GetProperty("task");
+            Accounts.ForEach(account => tskproperty!.SetValue(account, 0));
+            Accounts.ForEach(account => taskProperty!.SetValue(account, string.Empty));
+            timeSheetData.TaskID = 0;
+            timeSheetData.Task = string.Empty;
+        }
+
+        await FetchTaskData(SubClientID, SoftwareID, BillableGroupID);
+
+        var property = typeof(EmployeeAccountDetails).GetProperty("BillableGroupID");
+        Accounts.ForEach(account => property!.SetValue(account, BillableGroupID));
+        var BillableGroupProperty = typeof(EmployeeAccountDetails).GetProperty("BillableGroup");
+        Accounts.ForEach(account => BillableGroupProperty!.SetValue(account, BillableGroupName));
+        timeSheetData.BillableGroupID = BillableGroupID;
+        timeSheetData.BillableGroup = BillableGroupName;
+        await LocalStorageService.SetAsync(timeSheetData);
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    public async Task OnClientLoginChanged(ChangeEventArgs args)
+    {
+        ClientLogin = args!.Value!.ToString()!;
+        var ClientLoginProperty = typeof(EmployeeAccountDetails).GetProperty("ClientLogin");
+        Accounts.ForEach(account => ClientLoginProperty!.SetValue(account, ClientLogin));
+        var timeSheetData = await LocalStorageService.GetAsync<TimeSheetData>();
+        timeSheetData.ClientLogin = ClientLogin;
+        await LocalStorageService.SetAsync(timeSheetData);
+        StateHasChanged();
+        await AccountsChanged.InvokeAsync(Accounts);
+    }
+    
+    private async Task FetchStatusData()
+    {
+        try
+        {
+            var AccId = Accounts.ToList();
+            AccountDetailID = AccId.ToList()[0].AccountDetailID;
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            dsStatusData = await
+            ApiHelper.GetUsingMsgPackAsync<GetSavedAccountDetailsResult[]>($"/EditProduction/GetSavedAccountDetailsData/ProjectGroupID/{projectGroup.ProjectGroupID}/AccountDetailID/{AccountDetailID}/SchemaName/{schemaName}",
+            Http, AuthState.Token);
+            statusProperty.Clear();
+            statusProperty = new List<Tuple<PropertyInfo, string>>();
+            var type = typeof(GetSavedAccountDetailsResult);
+            foreach (var item in dsStatusData)
+            {
+                statusProperty.Add(Tuple.Create(type.GetProperty(item.AccountStatus), item.AccountStatus));
+                lblStatus = Convert.ToString(item.AccountStatus);
+            };
+
+            if(this.ScreenName == "EditScreen")
+            {
+                var editAccount = Accounts.FirstOrDefault();
+                if(editAccount != null)
+                {
+                    lblStatus = editAccount.AccountStatusID == 1 ? "Coded" : editAccount.AccountStatusID == 2 ? "Pended" : string.Empty;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task FetchTargetData(int billableGroupId, int taskId, int subTaskId)
+    {
+        try
+        {
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider;
+            dsTargetData = await
+            ApiHelper.GetUsingMsgPackAsync<GetInternalTargetResult[]>($"/EditProduction/GetInternalTarget/ProjectGroupID/{projectGroup.ProjectGroupID}/BillableGroupID/{billableGroupId}/TaskID/{taskId}/SubTaskID/{subTaskId}",
+            Http, AuthState.Token);
+            @* subTaskProperty.Clear();
+            subTaskProperty = new List<Tuple<int, string>>();
+            var type = typeof(GetInternalTargetResult); *@
+            foreach (var item in dsTargetData)
+            {
+                @* subTaskProperty.Add(Tuple.Create(item.SubTaskID, item.SubTask)); *@
+                lblTarget = Convert.ToString(item.InternalTarget);
+                LabelTarget = Convert.ToString(item.InternalTarget) + "%";                
+            };
+            //await FetchStatusData();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private Task ValidateKey(KeyboardEventArgs args)
+    {
+        
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,63 @@
+@page "/productivityReport"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Services;
+@using Microsoft.AspNetCore.SignalR.Client;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Authorization;
+
+@using Microsoft.Extensions.Logging;
+@using Microsoft.Extensions.Configuration
+@using Microsoft.JSInterop;
+@using BlazorDownloadFile;
+@using DocumentFormat.OpenXml;
+@using MatBlazor;
+@using MessagePack;
+@inject ILogger<ProductionUpload> Logger
+@inject IConfiguration Configuration
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IJSRuntime JSRuntime;
+@using System;
+@using System.Data;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Threading.Tasks;
+
+<ContentWrapper Header="" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    <AuthorizeView Policy="ProductivityReportAccess">
+        <Authorized Context="Auth">
+            <PageHeading Title="Poductivity Report"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="card">
+                    <div class="row mt-2">
+                        <div class="col-3 pe-0">
+
+                            <label>From Date</label>
+                            <input type="date" class="autocomplete-input rounded p-2" style="margin-top:-1px !important"
+                                value=item.FromDate @onchange="OnFromDateSelected" />
+                        </div>
+                        @* <input type="date" id="DatePicker" class="autocomplete-input rounded p-2"
+                            style="margin-top:-1px
+                            !important" value="@GetDateTimeValue(field.FieldDetails.Field)" @onchange="@(args =>
+                            OnDateTimeValueChanged(field.FieldDetails.Field, args.Value.ToString()))" disabled="@disable"/>
+                        *@
+                        <div class="col-3 pe-0">
+                            <label>To Date</label>
+                            <input type="date" class="autocomplete-input rounded p-2" style="margin-top:-1px !important"
+                                value=item.ToDate @onchange="OnToDateSelected" />
+                        </div>
+                        <div class="col-3 pe-0">
+                            <button type="button" class="btn btn-success btn-sm m-t-20"
+                                @onclick="@btnDownload"><i class="fa fa-download" aria-hidden="true"></i> Download</button>
+                        </div>
+                    </div>
+                </section>
+            </ProgressScreen>
+        </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView>
+</ContentWrapper>

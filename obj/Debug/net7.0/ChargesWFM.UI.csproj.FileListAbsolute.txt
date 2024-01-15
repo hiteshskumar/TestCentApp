@@ -1,0 +1,6 @@
+C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI\obj\Debug\net7.0\ChargesWFM.UI.csproj.AssemblyReference.cache
+C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI\obj\Debug\net7.0\ChargesWFM.UI.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI\obj\Debug\net7.0\ChargesWFM.UI.AssemblyInfoInputs.cache
+C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI\obj\Debug\net7.0\ChargesWFM.UI.AssemblyInfo.cs
+C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI\obj\Debug\net7.0\ChargesWFM.UI.csproj.CoreCompileInputs.cache
+C:\Users\hitesh.kumar\Source\Repos\ChargesWFM.UI\obj\Debug\net7.0\ChargesWFM.UI.MvcApplicationPartsAssemblyInfo.cache

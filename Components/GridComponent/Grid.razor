@@ -1,0 +1,615 @@
+@typeparam TItem
+
+@using System.Data
+@using System.Linq.Expressions
+@using System.Reflection
+@using BlazorDownloadFile
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Models
+@using Types
+
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IJSRuntime JSRuntime
+@inject ILogger<Grid<TItem>> Logger
+@using ChargesWFM.UI.Services
+@inject IToasterService ToasterService
+
+<div class="d-flex justify-content-end mx-auto my-0 py-1 px-1">
+    @if (AllowExport)
+    {
+        @if (exportingData)
+        {
+            <span class="text-primary" role="button"><i class="fa fa-spinner spin-it text-primary"></i> Exporting</span>
+        }
+        else
+        {
+            <span class="btn btn-info btn-sm" role="button" @onclick="ExportDataAsync"><i class="fa fa-download me-1"></i>Export</span>
+        }
+    }
+</div>
+<div class="overflow-auto border rounded-1 table-height-c" style="@style">
+    <CascadingValue Value="this">
+        <table class="overflow-auto" style="white-space: nowrap; width: -webkit-fill-available;">
+            <thead>
+                <tr>
+                    @GridColumns
+                </tr>
+            </thead>
+                <tbody>
+                <Virtualize Items="@_items" Context="item">
+                    <tr @key="item" style="@(IsHighlighted(item)? "background-color: #c7c3c38f;" : "" )">
+                        @foreach (var column in Columns)
+                        {
+                            
+                            @if (column.Template != null)
+                            {
+                                <td @key="column" class="border p-2">
+                                    @column.Template(item)
+                                </td>
+                            }
+                            else if (column is GridCheckboxColumn<TItem> checkboxColumn)
+                            {
+                                <td @key="column" class="border p-2">
+                                    <div class="d-flex justify-content-center">
+                                        <input class="" type="checkbox" checked="@(checkboxColumn.GetValue(item))" @onchange="@(args => checkboxColumn.ItemChecked(item, args))" disabled=@checkboxColumn.IsDisabledValue(item)>
+                                    </div>
+                                </td>
+                            }
+                            else if (column is GridDateTimeColumn<TItem> ColumnValue)
+                            {
+                                @if(ColumnValue.GetValue(item)!=null && !string.IsNullOrEmpty(ColumnValue.GetValue(item).ToString()) && !ColumnValue.GetValue(item).ToString().Contains(','))
+                                {
+                                    DateTime value=  DateTime.Parse(ColumnValue.GetValue(item).ToString(), System.Globalization.CultureInfo.CurrentCulture);
+                                    @if(value.ToString("t")=="12:00 AM")
+                                    {
+                                        <td @key="column" class="border px-2 py-1 text-truncate-td">@value.ToString("d")</td>    
+                                    }
+                                    else
+                                    {
+                                        <td @key="column" class="border px-2 py-1 text-truncate-td">@ColumnValue.GetValue(item)</td>    
+                                    }
+                                }
+                                else
+                                {
+                                        <td @key="column" class="border px-2 py-1 text-truncate-td">@ColumnValue.GetValue(item)</td>  
+                                }
+                            }
+                            else if (column is GridTextboxColumn<TItem> textboxColumn)
+                            {
+                                <td @key="column" class="border px-2 py-1">
+                                    @if(textboxColumn.IsFieldShow(item))
+                                    {
+                                        <div class="d-flex justify-content-start">
+                                            @if(textboxColumn.FieldType == typeof(int) || textboxColumn.FieldType == typeof(int?))
+                                            {
+                                                <div class="ps-0">
+                                                    <input id="fetch-limit-count" class="form-control" type="number" min="1" value="@(textboxColumn.GetValue(item))" @onchange="@(args => textboxColumn.ItemChanged(item, args))" />
+                                                </div>
+                                            }
+                                            else if (textboxColumn.FieldType == typeof(DateTime) || textboxColumn.FieldType == typeof(DateTime?))
+                                            {
+                                                <input type="date" class="form-control" value="@(textboxColumn.GetValue(item))" @onchange="@(args => textboxColumn.ItemChanged(item, args))">
+                                            }
+                                            else
+                                            {
+                                                <input type="text" class="form-control" value="@(textboxColumn.GetValue(item))" @onchange="@(args => textboxColumn.ItemChanged(item, args))">
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                            }
+                            else if (column is GridColumn<TItem> gridColumn)
+                            {
+                                @if (@column.GetValue(item) is not null)
+                                {
+                                    <td @key="column" class="border px-2 py-1 text-truncate-td" >@gridColumn.AdditionalText@column.GetValue(item)</td>
+                                }
+                                else
+                                {
+                                    <td @key="column" class="border px-2 py-1 text-truncate-td" >@column.GetValue(item)</td>
+                                }
+                            }
+                        }
+                    </tr>
+                @if (RowChild != null && _displayRowChildExpression(item))
+                {
+                        <tr>
+                            <td colspan="@Columns.Count()">
+                                @RowChild(item)
+                            </td>
+                        </tr>
+                    
+                }
+            </Virtualize>
+            </tbody>
+        </table>
+    </CascadingValue>
+    @if (!_items.Any())
+    {
+        <div class="d-flex justify-content-center" style="padding-top: 3%; padding-bottom: 3%;">
+            <span class="lead">No data found</span>
+        </div>
+    }
+</div>
+@if (DisplayFooter)
+{
+    <div class="d-flex justify-content-between mt-2 mb-1 px-2">
+        <div class="d-flex align-items-center">
+            <div class="border rounded-3 p-1">
+                <span>Page size</span>
+                <select value="@PageSize" @onchange="OnPageSizeChanged" class="page-select">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="300">300</option>
+                    <option value="400">400</option>
+                    <option value="500">500</option>
+                </select>                      
+            </div>
+            <span class="ms-3 page-result">Showing @_startIndex to @_endIndex of @_totalItems items</span>
+        </div>
+        @if (_totalItems > PageSize)
+        {
+            <div class="">
+                <ul class="list-group list-group-horizontal m-0 pagination-c" style="width: fit-content; flex-direction: row !important;">
+                    <li class="list-group-item list-group-item-action user-select-none" role="button" disabled="@(CurrentPage == 1)" @onclick="OnPreviousPageClicked">Previous</li>
+                    @for (var pageNumber = CurrentPage - 1 == 0 ? 1 : CurrentPage - 1; pageNumber <= CurrentPage + 1 && pageNumber <= TotalPages; pageNumber++)
+                    {
+                        @if (@CurrentPage == @pageNumber)
+                        {
+                            <li class="list-group-item list-group-item-action user-select-none active">@pageNumber</li>
+                        }
+                        else
+                        {
+                            var page = pageNumber;
+                            <li class="list-group-item list-group-item-action user-select-none" role="button" @onclick="@(() => OnPageClicked(page))">@pageNumber</li>
+                        }            
+                    }
+                    <li class="list-group-item list-group-item-action user-select-none" role="button" disabled="@(CurrentPage == TotalPages)" @onclick="OnNextPageClicked">Next</li>
+                </ul>
+            </div>
+        }
+    </div>
+}
+
+@code
+{
+    private const string defaultMinimumHeight = "40vh";
+    
+
+    private IEnumerable<TItem> _sourceItems = Enumerable.Empty<TItem>();
+    private List<TItem> _filterItems = new List<TItem>();
+    private List<TItem> _items = new List<TItem>();
+    private Func<TItem, bool> _displayRowChildExpression;
+    private int _startIndex;
+    private int _endIndex;
+    private int _totalItems;
+    private bool exportingData;
+    private string style => $"min-height: {MinimumHeight};";
+    private Expression<Func<TItem, object>> _highlightRowExpression;
+    private Func<TItem, object> _getValueHighlight;
+
+    [Parameter]
+    public Expression<Func<TItem, object>> HighlightRowExpression 
+    { 
+        get 
+        {
+            return _highlightRowExpression;
+        } 
+        set 
+        {
+            if (value != null)
+            {
+                _highlightRowExpression = value;
+                _getValueHighlight = value.Compile();
+            }
+        }
+    }
+
+    [Parameter]
+    public IEnumerable<TItem> Items { get { return _sourceItems; } set { SetItems(value); } }
+    [Parameter]
+    public EventCallback<IEnumerable<TItem>> ItemsChanged { get; set; }
+
+    [Parameter]
+    public List<ISearchableGridColumn<TItem>> Columns { get; set; } = new List<ISearchableGridColumn<TItem>>();
+    
+    [Parameter]
+    public RenderFragment GridColumns { get; set; }
+    [Parameter]
+    public RenderFragment<TItem> RowChild { get; set; }
+    [Parameter]
+    public Expression<Func<TItem, bool>> DisplayRowChildExpression { get; set; }
+
+    [Parameter]
+    public bool AllowFiltering { get; set; }
+
+    [Parameter]
+    public bool AllowSorting { get; set; }
+
+    [Parameter]
+    public bool DisplayItemsCount { get; set; } = true;
+
+    [Parameter]
+    public bool DisplayFooter { get; set; } = true;
+
+    [Parameter]
+    public int PageSize { get; set; } = 20;
+
+    [Parameter]
+    public int TotalPages { get; set; }
+
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public bool CustomFilter { get; set;}
+    [Parameter]
+    public List<SearchCriteria> SearchCriterias { get; set; } = new List<SearchCriteria>();
+    [Parameter]
+    public EventCallback<IEnumerable<SearchCriteria>> OnFilter { get; set; }
+    [Parameter]
+    public string MinimumHeight { get; set; } = defaultMinimumHeight;
+   
+    [Parameter]
+    public EventCallback<int> PageSizeChanged { get; set; }
+    [Parameter]
+    public bool AllowExport { get; set; } = true;
+    [Parameter]
+    public Tuple<string, GridSortOrder> SortColumn { get; set; }
+    [Parameter]
+    public EventCallback<Tuple<string, GridSortOrder>> SortColumnChanged { get; set; }
+   
+   public bool IsHighlighted(TItem item)
+    {
+         return (_highlightRowExpression != null && (bool)_getValueHighlight(item));   
+    }
+    protected override Task OnInitializedAsync()
+    {
+        if (DisplayRowChildExpression != null)
+        {
+            _displayRowChildExpression = DisplayRowChildExpression.Compile();
+        }
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await GenerateItems();
+    }
+
+    public void AddColumn(ISearchableGridColumn<TItem> column)
+    {
+        Columns.Add(column);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void RemoveColumn(ISearchableGridColumn<TItem> column)
+    {
+        Columns.Remove(column);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public Task ItemChecked(GridCheckboxColumn<TItem> column, bool value)
+    {
+        var checkedValues = _items
+            .Select(item => (bool)column.GetValue(item))
+            .Distinct();
+        if (checkedValues.Count() != 1)
+        {
+            return Task.CompletedTask;
+        }
+        if (checkedValues.First() == value)
+        {
+            return column.SetCheckedValue(value);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task CheckboxChanged(GridCheckboxColumn<TItem> column, bool value)
+    {
+        return column.BulkCheckedChanged.InvokeAsync(Tuple.Create(_items.AsEnumerable(), value));
+    }
+
+    public Task ClearSelection(GridCheckboxColumn<TItem> column, bool value)
+    {
+        return column.ClearSelection.InvokeAsync(value);
+    }
+
+    public void UpdateValue(PropertyInfo property, object value)
+    {
+        foreach (var item in _items)
+        {
+            property.SetValue(item, value);
+        }
+        StateHasChanged();
+    }
+
+    public async Task HeaderClicked(string field, Func<TItem, object> valueExpression, GridSortOrder sortOrder)
+    {
+        var startTime = DateTime.Now;
+        if (!AllowSorting)
+        {
+            return;
+        }
+        SortColumn = Tuple.Create(field, sortOrder);
+        await SortColumnChanged.InvokeAsync(SortColumn);
+        var endTime = DateTime.Now;
+    }
+
+    public async Task ApplyFilter(Func<TItem, object> valueExpression, string field, SearchCriteriaFilters searchCriteriaFilter, object filterValue, bool enterClicked)
+    {
+        var startTime = DateTime.Now;
+        var searchCriteria = new SearchCriteria
+        {
+            Field = field,
+            Operator = searchCriteriaFilter.ToString(),
+            SearchValue = filterValue?.ToString(),
+        };
+        var criteria = SearchCriterias.Find(criteria => criteria.Field.Equals(field));
+        if (criteria == null)
+        {
+            SearchCriterias.Add(searchCriteria);
+            if (CustomFilter && enterClicked == true)
+            {
+                await OnFilter.InvokeAsync(SearchCriterias);
+            }
+            else
+            {
+                await GenerateItems();
+            }
+        }
+        else
+        {
+            SearchCriterias.Remove(criteria);
+            SearchCriterias.Add(searchCriteria);
+            if (CustomFilter && enterClicked == true)
+            {
+                await OnFilter.InvokeAsync(SearchCriterias);
+            }
+            else
+            {
+                await GenerateItems();
+            }
+        }
+        StateHasChanged();
+        var endTime = DateTime.Now;
+    }
+
+    public Task RemoveFilter(string field)
+    {
+        var searchCriteria = SearchCriterias.Find(criteria => criteria.Field.Equals(field));
+        if (searchCriteria != null)
+        {
+            SearchCriterias.Remove(searchCriteria);
+        }
+        if (CustomFilter)
+        {
+            return OnFilter.InvokeAsync(SearchCriterias);
+        }
+        else
+        {
+            return GenerateItems();
+        }
+    }
+
+    private Task ApplyAllFilters()
+    {
+        return Task.Run(() =>
+        {
+            _filterItems = _sourceItems
+                .Where(item =>
+                {
+                    return Columns
+                        .Where(column =>
+                            {
+                                if (column is GridColumn<TItem> gridColumn)
+                                {
+                                    // return !string.IsNullOrEmpty(gridColumn.FilterText);
+                                    return gridColumn.FilterValue != null;
+                                }
+                                else if(column is GridDateTimeColumn<TItem> ColumnValue)
+                                {
+                                    return ColumnValue.FilterValue != null;
+                                }
+                                return false;
+                            })
+                        .Cast<ISearchableGridColumn<TItem>>()
+                        .All(column =>
+                        {
+                            var value = column.GetValue(item);
+                            return SearchCriteria.Evaluate(value, column.SearchCriteriaFilter, column.FilterValue);
+                        });
+                })
+                .ToList();
+            GoToPage(CurrentPage);
+        });
+    }
+
+    private async Task SetItems(IEnumerable<TItem> items)
+    {
+        _sourceItems = items ?? Enumerable.Empty<TItem>();
+    }
+
+    private async Task GenerateItems()
+    {
+        await ApplyAllFilters();
+        await ApplySort();
+        await GoToPage(CurrentPage);
+        if (CurrentPage > TotalPages)
+        {
+            await GoToPage(1);
+        }
+        StateHasChanged();
+    }
+
+    private Task ApplySort()
+    {
+        if (SortColumn != null)
+        {
+            var column = Columns.FirstOrDefault(column => column.Field == SortColumn.Item1);
+            if (column != null)
+            {
+                if (SortColumn.Item2 == GridSortOrder.Ascending)
+                {
+                    _filterItems = _filterItems
+                        .OrderBy(item => (IComparable)column.GetValue(item))
+                        .ToList();
+                }
+                else
+                {
+                    _filterItems = _filterItems
+                        .OrderByDescending(item => (IComparable)column.GetValue(item))
+                        .ToList();
+                }
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task GoToPage(int pageNumber)
+    {
+        CurrentPage = pageNumber;
+        var skipCount = PageSize * (CurrentPage - 1);
+        _items = _filterItems
+            .Skip(skipCount)
+            .Take(PageSize)
+            .ToList();
+        var indices = GetCurrentPageIndices();
+        _startIndex = indices.Item1;
+        _endIndex = indices.Item2;
+        _totalItems = _filterItems.Count;
+        CalculatePages();
+        // Console.WriteLine($"Current: {CurrentPage}, TotalPages: {TotalPages}");
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void CalculatePages()
+    {
+        var length = SearchCriterias.Any() ? _filterItems.Count() : _sourceItems.Count();
+        var mod = length % PageSize > 0 ? 1 : 0;
+        TotalPages = (length / PageSize) + mod;
+    }
+
+    private Task OnPreviousPageClicked()
+    {
+        if (CurrentPage == 1 || TotalPages == 0)
+        {
+            return Task.CompletedTask;
+        }
+        return OnPageClicked(CurrentPage - 1);
+    }
+
+    private Task OnNextPageClicked()
+    {
+        if (CurrentPage == TotalPages || TotalPages == 0)
+        {
+            return Task.CompletedTask;
+        }
+        return OnPageClicked(CurrentPage + 1);
+    }
+
+    private Task OnPageClicked(int pageNumber)
+    {
+        return GoToPage(pageNumber);
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs args)
+    {
+        PageSize = Convert.ToInt32(args.Value);
+        await PageSizeChanged.InvokeAsync(PageSize);
+        await GoToPage(1);
+    }
+
+    private Tuple<int, int> GetCurrentPageIndices()
+    {
+        var count = _items.Count();
+        var startIndex = count > 0 ? ((CurrentPage - 1) * PageSize) + 1 : 0;
+        var endIndex = count > 0 ? startIndex + count - 1 : 0;
+        return Tuple.Create(startIndex, endIndex);
+    }
+
+    private static IComparable OrderByProperty<T>(PropertyInfo property, T item)
+    {
+        return (IComparable)property.GetValue(item);
+    }
+
+    private async Task ExportDataAsync()
+    {
+        try
+        {
+            exportingData = true;
+            var columns = Columns
+                .Where(column => column is GridColumn<TItem> && column.Template == null)
+                .Cast<GridColumn<TItem>>();
+            var datecolumns = Columns
+                .Where(column => column is GridDateTimeColumn<TItem> && column.Template == null)
+                .Cast<GridDateTimeColumn<TItem>>();
+            if (!columns.Any())
+            {
+                Logger.LogError("No columns found for export. Please check if Field attribute is added to GridColumn");
+                return;
+            }
+            using var dataTable = new DataTable();
+            foreach (var column in columns)
+            {
+                //Console.WriteLine($"Adding column: {column.Title}");
+                dataTable.Columns.Add(column.Title);
+            }
+            foreach (var column in datecolumns)
+            {
+                //Console.WriteLine($"Adding column: {column.Title}");
+                dataTable.Columns.Add(column.Title);
+            }
+            foreach (var item in _items)
+            {
+                DataRow row = dataTable.NewRow();
+                foreach (var column in columns)
+                {
+                    if (string.IsNullOrEmpty(column.AdditionalText))
+                    {
+                        row[column.Title] = column.GetValue(item);
+                    }
+                    else
+                    {  
+                        if (column.GetValue(item) is not null)
+                        {
+                            row[column.Title] = $"{column.AdditionalText}{column.GetValue(item)}";
+                        }
+                    }
+                }
+                foreach (var column in datecolumns)
+                {
+                    if (column.GetValue(item) is not null)
+                    {
+                        var currValue = Convert.ToDateTime(column.GetValue(item));
+                        if(currValue.ToString("t")=="12:00 AM")
+                        {
+                            row[column.Title] = currValue.ToString("d");
+                        }
+                        else
+                        {
+                            row[column.Title] = column.GetValue(item);
+                        }
+                    }
+                }
+                dataTable.Rows.Add(row);
+            }
+            var bytes = await ExcelPackage.GenerateTemplateAsync(dataTable);
+            await BlazorDownloadFileService.DownloadFile("Data.xlsx", bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
+        catch (Exception ex)
+        {
+            ToasterService.AddDanger("Grid","Failed to export data to Excel");
+            Logger.LogError(ex.Message, ex);
+        }
+        finally
+        {
+            exportingData = false;
+        }
+    }
+}

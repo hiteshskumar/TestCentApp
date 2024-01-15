@@ -1,0 +1,119 @@
+@page "/employeetransaction"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Modal;
+@using ChargesWFM.UI.Services;
+@using BlazorDownloadFile;
+@inject ILogger<EditProduction> Logger
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IJSRuntime JSRuntime;
+@using System;
+@using System.Data;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Reflection;
+@using System.Threading.Tasks;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using MatBlazor;
+@using Microsoft.JSInterop;
+@using Newtonsoft.Json;
+@using System.Text;
+@using System.Text.RegularExpressions;
+@inject NavigationManager NavManager
+
+<ContentWrapper Header="Employee Transaction" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    @* <AuthorizeView Policy="EditProductionAccess">
+        <Authorized Context="Auth"> *@
+            <LoadingScreen Enabled="@displayProgress" Message="Loading">
+                @if(ShowPage)
+                {
+                    <ModifyProduction Accounts="@accounts" SelectedClientLogin="@selectedClientLogin"
+                    ScreenName="@screenName"></ModifyProduction>
+                }
+            </LoadingScreen>
+        @* </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView> *@
+</ContentWrapper>
+
+@code {
+    [Inject]
+    protected AuthenticationStateProvider? AuthProvider { get; set; }
+    [Inject]
+    protected HttpClient? Http { get; set; }
+    [Inject]
+    IMatToaster Toaster { get; set; }
+    private List<EmployeeAccountDetails> accounts = new List<EmployeeAccountDetails> { new EmployeeAccountDetails() };
+    public int ProjectGroupID { get; set; }
+    public string? ProjectGroupName { get; set; }
+    public string? schemaName = string.Empty;
+    private string? progressText { get; set; }
+    private bool displayLoading;
+    private string selectedClientLogin { get; set; }
+    public string? screenName { get; set; }
+    public bool displayProgress;
+    public bool ShowPage { get; set; }
+    private IEnumerable<CodingFieldTypes> FieldTypes = Enumerable.Empty<CodingFieldTypes>();
+    [Inject]
+    ILocalStorageService? LocalStorageService { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        screenName = "AddScreen";
+    }
+    protected async Task OnProjectGroupChanged(NexgenProjectGroups pg)
+    {
+        this.ProjectGroupID = pg.ProjectGroupID;
+        this.ProjectGroupName = pg.ProjectGroupName;
+        schemaName = pg.SchemaName;
+        displayProgress = true;
+        ShowPage = false;
+        accounts = new List<EmployeeAccountDetails> { new EmployeeAccountDetails() };
+        //await this.FetchSelectedPlacementFields();  
+        await GetCodingFieldTypes();
+        this.StateHasChanged();
+        displayProgress = false;
+    }
+    private async Task GetCodingFieldTypes()
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService!.GetAsync<NexgenProjectGroups>();
+            var AuthState = (AuthStateProvider)AuthProvider!;
+            FieldTypes = await
+            ApiHelper.GetUsingMsgPackAsync<CodingFieldTypes[]>($"/EditTransaction/GetCodingFieldTypes/ProjectGroupID/{projectGroup.ProjectGroupID}",
+            Http,
+            AuthState!.Token);
+            await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+            if(FieldTypes.Any(exp => exp.FieldType == "Transaction Page"))
+            {
+                ShowPage = true;
+            }
+            else
+            {
+                Toaster.Add("Access Denied For Allocation Page", MatToastType.Danger, "Employee Transaction");
+            }
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private void DisplayLoading(bool display, string? progressMessage = null)
+    {
+        displayLoading = display;
+        progressText = progressMessage ?? string.Empty;
+        StateHasChanged();
+    }
+}

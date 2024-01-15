@@ -1,0 +1,466 @@
+@page "/editproduction"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Services;
+@using BlazorDownloadFile;
+@inject ILogger<EditProduction> Logger
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IJSRuntime JSRuntime;
+@using System;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Reflection;
+@using System.Threading.Tasks;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using MatBlazor;
+@using Microsoft.JSInterop;
+@inject NavigationManager NavManager
+
+<ContentWrapper Header="Edit Production" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged" Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+     @* <AuthorizeView Policy="EditProductionAccess">
+        <Authorized Context="Auth"> *@
+            @if(!IsEditable)        
+            {    
+            <PageHeading Title = "Modify Employee Transaction"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">              
+                <section class="card">                        
+                    <div>
+                        @if (_placementAccount != null  && placementProperty.Any() && placementProperty != null)
+                        {
+                            <Grid TItem="EmployeeAccountDetails" @bind-SortColumn="sortColumn" Items="@_placementAccount" ItemsChanged="@OnItemsChanged" OnFilter="@OnFilter" CustomFilter="true" AllowFiltering="true" AllowSorting="true" MinimumHeight="75vh" @bind-PageSize="pageSize">
+                                <GridColumns>
+                                    <GridColumn TItem="EmployeeAccountDetails" Title="Action" AllowFiltering="false" AllowSorting="false">
+                                        <Template Context="Data">
+                                            <div class="d-flex justify-content-center">
+                                                <span> <i class="bi bi-pencil-square" role="button" title="Edit" style="color: #6ab065; font-size: 16px;" 
+                                                @onclick="@(() => EditEmployeeTransaction(Data))"></i></span>
+                                                 @if(HasDeleteButtonShow())
+                                                {
+                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <i class="bi bi-trash" role="button" title="Delete" style="color: #ee0400; font-size: 16px;"
+                                                    @onclick="@(() => DeleteEmpTran(Data))"></i></span>
+                                                }
+                                            </div>
+                                           
+                                        </Template>
+                                    </GridColumn>
+                                    @foreach (var item in placementProperty)
+                                    {
+                                        if(item.Item1.PropertyType==typeof(DateTime)||item.Item1.PropertyType==typeof(DateTime?))
+                                        {
+                                            <GridDateTimeColumn @key="item" TItem="EmployeeAccountDetails"
+                                                ValueExpression="@(_placementAccount => item.Item1.GetValue(_placementAccount))"
+                                                Title="@item.Item2" SimpleFilter="true" FieldType="@item.Item1.PropertyType"
+                                                Field="@item.Item2" AllowFiltering="true" AllowSorting="true">
+                                            </GridDateTimeColumn>
+                                        }
+                                        else
+                                        {
+                                            <GridColumn @key="item" TItem="EmployeeAccountDetails" Field="@item.Item2" Title="@item.Item2"
+                                                ValueExpression="@(_placementAccount => item.Item1.GetValue(_placementAccount))"
+                                                SimpleFilter="true" FieldType="@item.Item1.PropertyType"
+                                                AllowFiltering="true" AllowSorting="true">
+                                            </GridColumn>
+                                        }                        
+                                    }
+                                </GridColumns>
+                            </Grid>
+                        }
+                    </div>
+                </section>
+                <MatDialog @bind-IsOpen="@deleteConfirmationDialog">
+                    <MatDialogTitle>Confirmation</MatDialogTitle>
+                    <MatDialogContent>
+                        <div class="text-center mt-3">
+                            <p class="fw-light">Are you sure you want to delete</p>
+                        </div>
+                    </MatDialogContent>
+                    <MatDialogActions>
+                        <div class="upload-button-group">
+                            <button type="button" class="btn btn-sm btn-success" @onclick="(e => OnConfirmationSubmitClicked())"><i
+                                    class="fa fa-check me-2"></i>Yes</button>
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="(e => OnConfirmationCanceledClicked())"><i
+                                    class="fa fa-times me-2"></i>No</button>
+                        </div>
+                    </MatDialogActions>
+                </MatDialog>               
+            </ProgressScreen>
+            }
+            else
+            {
+                <ModifyProduction Accounts="@editableAccounts"
+                SelectedSubClient = "@EditSubClient"
+                 SelectedSoftware =  "@EditSoftware"
+                 SelectedBillableGroup =  "@EditBillableGroup"
+                 SelectedClientLogin=@selectedClientLogin
+                 OnButtonClicked="@OnButtonClicked" 
+                 IsEditable=@IsProductionEditable ScreenName = "@screenName"></ModifyProduction>
+            }
+        @* </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView> *@
+</ContentWrapper>
+
+@code {
+    private bool isEnabled = false;
+    public bool IsEditable;
+    private bool displayLoading;
+    public bool IsProductionEditable;
+    private string? progressText { get; set; }
+    [Inject]
+    HttpClient Http { get; set; }
+    [Inject]
+    AuthenticationStateProvider? AuthProvider { get; set; }
+    [Inject]
+    ILocalStorageService? LocalStorageService { get; set; }
+    [Inject]
+    IMatToaster Toaster { get; set; }
+    private NexgenProjectGroups[]? _nexgenProjectGroups = Array.Empty<NexgenProjectGroups>();
+    private int EmployeeID { get; set; }
+    private int projectGroupID = 0;
+    private int ProjectGroupID { get; set; }
+    private string? ProjectGroupName { get; set; }
+    public string schemaName = string.Empty;
+    private string selectedClientLogin { get; set; }
+    private string baseURI = string.Empty;
+    [Parameter]
+    public string page { get; set; }
+    public long AccountDetailID;
+    public string Type;
+    private int pageSize = 20;
+    private bool deleteConfirmationDialog { get; set; }
+    private EmployeeAccountDetails deleteAccountDetail;
+    private Tuple<string, GridSortOrder> sortColumn;
+    private WorkAllocationField[] dsSelectedPlacementField;
+    private List<EmployeeAccountDetails> editableAccounts = new List<EmployeeAccountDetails>();
+    private string EditSubClient { get; set; }
+    private string EditSoftware { get; set; }
+    private string EditBillableGroup { get; set; }
+    private List<Tuple<PropertyInfo, string>> placementProperty = new List<Tuple<PropertyInfo, string>>();
+    [Parameter]
+    public IEnumerable<EmployeeAccountDetails> _placementAccount { get; set; } =
+    Enumerable.Empty<EmployeeAccountDetails>();
+    [Parameter]
+    public IEnumerable<EmployeeAccountDetails> _deleteAccount { get; set; } =
+    Enumerable.Empty<EmployeeAccountDetails>();
+    [Parameter]
+    public EventCallback<IEnumerable<EmployeeAccountDetails>> ItemsChanged { get; set; }
+    public string? screenName { get; set; }
+    public int ProcessID { get; set; }
+    public int ClientID { get; set; }
+    public bool IsShowDelete = false;
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await LocalStorageService.GetAsync<AuthenticatedUser>();
+        EmployeeID = user.EmployeeId;
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        if(projectGroup != null)
+        {
+            projectGroupID = projectGroup.ProjectGroupID;
+            schemaName = projectGroup.SchemaName!;
+        }
+       
+        screenName = "EditScreen";
+        var processClient = await LocalStorageService.GetAsync<ProcessClients>();
+        if(processClient != null)
+        {
+            this.ProcessID = processClient.ProcessID;
+            this.ClientID = processClient.ClientID;
+        }
+        //await this.FetchSelectedPlacementFields();
+        placementProperty.Clear();
+    }
+    public bool HasDeleteButtonShow()
+    {
+        if (this.ProcessID == 146 || this.ClientID == 113 || (this.ClientID == 11 && this.ProcessID == 24)) 
+		{
+     		this.IsShowDelete = false;
+		}
+		else
+		{
+		    this.IsShowDelete = true;
+		}
+        return IsShowDelete;
+    }
+
+   
+    protected async Task OnProjectGroupChanged(NexgenProjectGroups pg)
+    {
+        this.ProjectGroupID = pg.ProjectGroupID;
+        this.ProjectGroupName = pg.ProjectGroupName;
+        var processClient = await LocalStorageService!.GetAsync<ProcessClients>();
+        this.ProcessID = processClient.ProcessID;
+        this.ClientID = processClient.ClientID;
+        schemaName = pg.SchemaName!;
+        placementProperty.Clear();
+        editableAccounts = new List<EmployeeAccountDetails>();
+        
+        await this.FetchSelectedPlacementFields();
+        this.StateHasChanged();
+    }
+    private Task OnItemsChanged(IEnumerable<EmployeeAccountDetails> items)
+    {
+        return ItemsChanged.InvokeAsync(items);
+    }
+    private async Task FetchSelectedPlacementFields()
+    {
+        try
+        {
+             
+            DisplayLoading(true, "Loading");
+            isEnabled = true;            
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            IEnumerable<SearchCriteria> searchCriterias = Enumerable.Empty<SearchCriteria>();
+            var searchParameters = new GridSearchParameters {
+            SearchCriterias = searchCriterias,
+            SearchValue = "",
+            ProjectGroupID = projectGroup.ProjectGroupID,
+            SchemaName = this.schemaName,
+            EmployeeID = this.EmployeeID
+            };
+
+            
+            var AuthState = (AuthStateProvider)AuthProvider!;
+            @* dsSelectedPlacementField = await
+            ApiHelper.GetUsingMsgPackAsync<WorkAllocationField[]>($"/EditProduction/GetPlacementFieldMapping/ProjectGroupID/{ProjectGroupID}/fltCondition/{"Empty"}/EmployeeID/{EmployeeID}/SchemaName/{schemaName}",
+            Http, AuthState.Token); *@
+
+            dsSelectedPlacementField = await ApiHelper.PostUsingMsgPackAsync<WorkAllocationField[]>($"/EditProduction/GetPlacementFieldMapping", searchParameters, Http,  AuthState.Token);
+
+            placementProperty.Clear();
+            placementProperty = new List<Tuple<PropertyInfo, string>>();
+            var type = typeof(EmployeeAccountDetails);
+            if (dsSelectedPlacementField != null)
+            {
+                if (dsSelectedPlacementField[0].AccountDetails.Count() > 0)
+                {   
+                    this.IsEditable = false;
+                    foreach (var item in dsSelectedPlacementField[0].PlacementUniqueFieldDetails)
+                    {
+                        placementProperty.Add(Tuple.Create(type.GetProperty(item.Field), item!.DisplayName)!);
+                    };
+                    placementProperty.Add(Tuple.Create(type.GetProperty("AccountStatus"), "AccountStatus")!);
+                    placementProperty.Add(Tuple.Create(type.GetProperty("BillableGroup"), "BillableGroup")!);
+                    placementProperty.Add(Tuple.Create(type.GetProperty("WorkedDate"), "WorkedDate")!);
+                    placementProperty.Add(Tuple.Create(type.GetProperty("Workedby"), "Workedby")!);
+                    foreach (var item in dsSelectedPlacementField[0].AccountDetails)
+                    {
+                        _placementAccount = dsSelectedPlacementField[0].AccountDetails;
+                    };
+                }
+                else
+                {
+                    Toaster.Add("No Data Found!", MatToastType.Danger, "Modify Employee Transaction");
+                   // await OnResetAccount();
+                     
+                }
+            }
+            StateHasChanged();
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            Toaster.Add("Error occured while loading data!", MatToastType.Danger, "Modify Employee Transaction");
+            DisplayLoading(false);
+        }
+        finally
+        {
+            isEnabled = false;
+        }
+    }
+    private async Task OnFilter(IEnumerable<SearchCriteria> searchCriterias)
+    {
+            DisplayLoading(true, "Loading");
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            List<string> searchValueList = new List<string>();
+            string searchValue = string.Empty;
+            foreach(var s in searchCriterias)
+            {
+                searchValueList.Add(s.SearchValue);
+                searchValue = s.SearchValue;
+                s.SearchValues = searchValueList;
+                //s.Field = s.Field.Replace(' ','_');
+            }
+            
+            var searchParameters = new GridSearchParameters {
+                SearchCriterias = searchCriterias,
+                SearchValue = "",
+                ProjectGroupID = projectGroup.ProjectGroupID,
+                SchemaName = this.schemaName,
+                EmployeeID = this.EmployeeID
+                
+            };
+            
+            var AuthState = (AuthStateProvider)AuthProvider!;
+            dsSelectedPlacementField = await ApiHelper.PostUsingMsgPackAsync<WorkAllocationField[]>($"/EditProduction/GetPlacementFieldMapping", searchParameters, Http,  AuthState.Token);
+        
+            var type = typeof(EmployeeAccountDetails);
+            if (dsSelectedPlacementField != null)
+            {
+                placementProperty.Clear();
+                foreach (var item in dsSelectedPlacementField[0].PlacementUniqueFieldDetails)
+                {
+                    placementProperty.Add(Tuple.Create(type.GetProperty(item.Field), item!.DisplayName)!);
+                };
+                placementProperty.Add(Tuple.Create(type.GetProperty("AccountStatus"), "AccountStatus")!);
+                placementProperty.Add(Tuple.Create(type.GetProperty("BillableGroup"), "BillableGroup")!);
+                placementProperty.Add(Tuple.Create(type.GetProperty("WorkedDate"), "WorkedDate")!);
+                placementProperty.Add(Tuple.Create(type.GetProperty("Workedby"), "Workedby")!);
+                foreach (var item in dsSelectedPlacementField[0].AccountDetails)
+                {
+                    _placementAccount = dsSelectedPlacementField[0].AccountDetails;
+                };
+                StateHasChanged();
+                DisplayLoading(false);
+            }
+            DisplayLoading(false);
+    }
+    private async void EditEmployeeTransaction(EmployeeAccountDetails account)
+    {
+        try
+        {
+                DisplayLoading(true, "Loading");
+                IsEditable = true;
+                editableAccounts.Clear();
+                var AuthState = (AuthStateProvider)AuthProvider;
+                var AccountDetailData = await
+                ApiHelper.GetUsingMsgPackAsync<EmployeeAccountDetails[]>($"/EditProduction/GetAccountsData/SchemaName/{schemaName}/AccountDetailID/{account.AccountDetailID}",
+                Http, AuthState.Token);
+                var Accounts = AccountDetailData.ToList();
+                account = Accounts.First();
+                editableAccounts.Add(account);
+                selectedClientLogin = account.ClientLogin;    
+                EditSubClient = account.SubClient;
+                EditBillableGroup = account.BillableGroup;
+                EditSoftware = account.Software;    
+                screenName = "EditScreen";   
+                Console.WriteLine("Edit Employee Transaction" + screenName);       
+                //AccountDetailID = account.AccountDetailID;
+                @* if (account.FirstLevelAuditStatusID != 8)
+                    {
+                    IsProductionEditable = true;
+                    Toaster.Add("EditProduction", MatToastType.Warning, "Edit should not be allowed for QC'd account");
+                    } *@
+                @* var accountData = dsSelectedPlacementField.Select(exp => exp.AccountDetails).FirstOrDefault();
+                if (accountData != null)
+                {
+                    var accounts = accountData.Where(exp => exp.AccountDetailID == account.AccountDetailID).FirstOrDefault();
+                    AccountDetailID = accounts.AccountDetailID;
+                } *@
+                
+                //await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+                
+                DisplayLoading(false);                
+        }
+        catch (Exception ex)
+        {
+            Toaster.Add("Error in fetch download template type", MatToastType.Danger, "Upload");
+            DisplayLoading(false);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+    private Task DeleteEmpTran(EmployeeAccountDetails AccDetailId)
+    {
+        deleteAccountDetail = AccDetailId;
+        deleteConfirmationDialog = true;
+        return Task.CompletedTask;
+    }
+    protected Task OnConfirmationCanceledClicked()
+    {
+        deleteConfirmationDialog = false;
+        return Task.CompletedTask;
+    }
+    protected async Task OnConfirmationSubmitClicked()
+    {
+        try
+        {
+            DisplayLoading(true, "Loading");
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var result = new StatusMessageResponse();
+            PostEmpTransactionData SaveData = new PostEmpTransactionData();
+
+            SaveData.EmployeeID = EmployeeID;
+            //SaveData.EmployeeID = 22004;
+            SaveData.UploadAccountID = deleteAccountDetail.AccountDetailID;
+            SaveData.SchemaName = schemaName;
+
+            result = await ApiHelper.PostUsingMsgPackAsync<StatusMessageResponse>("/EditProduction/DeleteSelectedAccount", SaveData,
+            Http, AuthState.Token);
+            if (result.StatusID == 1)
+            {
+                await FetchSelectedPlacementFields();
+                Toaster.Add("Deleted successfully", MatToastType.Success, "Modify Employee Transaction");
+                
+            }
+            else if (result.StatusID == 0)
+            {
+                Toaster.Add("Failed to delete", MatToastType.Warning, "Modify Employee Transaction");
+            }
+            else
+            {
+                Toaster.Add("Error in deletion", MatToastType.Danger, "Modify Employee Transaction");
+            }
+            DisplayLoading(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+            DisplayLoading(false);
+        }
+        finally
+        {
+            deleteConfirmationDialog = false;
+            isEnabled = false;
+        }
+    }
+    private async Task OnButtonClicked()
+    {
+        IsEditable = false;
+        editableAccounts.Clear();
+        @* if (!string.IsNullOrEmpty(pagefrom))
+        {
+            var createURL = $"{baseURI}{page}";
+            NavManager.NavigateTo(createURL);
+        } *@
+        await this.FetchSelectedPlacementFields();
+        baseURI = NavManager.BaseUri;
+        string createURL = baseURI + "editproduction";
+        NavManager.NavigateTo(createURL);
+        
+        this.StateHasChanged();
+        await Task.CompletedTask;
+    }
+    private void DisplayLoading(bool display, string? progressMessage = null)
+    {
+        displayLoading = display;
+        progressText = progressMessage ?? string.Empty;
+        StateHasChanged();
+    } 
+    private async Task OnResetAccount()
+    {
+        IsEditable = false;
+        editableAccounts.Clear();
+        @* if (!string.IsNullOrEmpty(pagefrom))
+        {
+            var createURL = $"{baseURI}{page}";
+            NavManager.NavigateTo(createURL);
+        } *@
+        await this.FetchSelectedPlacementFields();
+        baseURI = NavManager.BaseUri;
+        string createURL = baseURI + "editproduction";
+        NavManager.NavigateTo(createURL);
+        
+        this.StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+}

@@ -1,0 +1,144 @@
+@typeparam TItem
+
+@using System.Linq.Expressions
+@using System.Reflection
+@using Types
+
+@implements ISearchableGridColumn<TItem>
+@implements IDisposable
+
+@* <div class="border px-3 py-2" style="width: auto; color: #666; background-color: #eee; display: table-cell;"> *@
+<th class="border px-2 py-1" style="color: #666; background-color: #eee;">
+    <div>
+        <span class="@headerClass">
+                @Title 
+        </span>
+        <div class="d-flex justify-content-center">
+            <span class="@headerClass" @onclick="OnHeaderClicked">
+                <input class="" type="checkbox" checked="@Checked" @onchange="OnCheckedChange">
+            </span>
+            @if (DataTable.SortColumn?.Item2 == GridSortOrder.Ascending)
+            {
+                <i class="bi bi-sort-up"></i>
+            }
+            else if (DataTable.SortColumn?.Item2 == GridSortOrder.Descending)
+            {
+                <i class="bi bi-sort-down"></i>
+            }
+        </div>
+        @if (AllowClearingSelection)
+        {
+            <div class="text-center">
+                <span class="pointer text-danger fw-bold" @onclick="OnClearSelectionClicked" style="font-size: 11px;">Clear</span>
+            </div>
+        }    
+    </div>
+</th>
+@* </div> *@
+
+@code
+{
+    [Parameter]
+     public string Title { get; set; }
+    private string headerClass => AllowSorting && DataTable.AllowSorting ? "pointer user-select-none text-truncate font-weight-normal" : "user-select-none text-truncate font-weight-normal";
+    private Func<TItem, object> _getValue;
+    private Expression<Func<TItem, object>> _valueExpression;
+    private Func<TItem, bool> _getDisabledValue;
+    private Expression<Func<TItem, bool>> _disabledExpression;
+
+    [Parameter]
+    public Expression<Func<TItem, bool>> Disabled { get { return _disabledExpression; } set { _disabledExpression = value; _getDisabledValue = _disabledExpression.Compile(); } }
+
+    [Parameter]
+    public Expression<Func<TItem, object>> ValueExpression { get { return _valueExpression; } set { _valueExpression = value; _getValue = _valueExpression.Compile(); } }
+
+    [Parameter]
+    public bool Checked { get; set; }
+    [Parameter]
+    public EventCallback<Tuple<IEnumerable<TItem>, bool>> BulkCheckedChanged { get; set; }
+    [Parameter]
+    public EventCallback<Tuple<TItem, bool>> CheckedChanged { get; set; }
+    [Parameter]
+    public EventCallback<bool> ClearSelection { get; set; }
+
+    [Parameter]
+    public bool AllowFiltering { get; set; }
+
+    [Parameter]
+    public bool AllowSorting { get; set; }
+    
+    [Parameter]
+    public string Field { get; set; }
+
+    [Parameter]
+    public bool AllowClearingSelection { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem> Template { get; set; }
+    [Parameter]
+    public SearchCriteriaFilters SearchCriteriaFilter { get; set; }
+
+    [Parameter]
+    public object FilterValue { get; set; }
+
+    [CascadingParameter]
+    Grid<TItem> DataTable { get; set; }
+    
+    public Guid UniqueId { get; private set; } = Guid.NewGuid();
+
+    protected override Task OnInitializedAsync()
+    {
+        DataTable.AddColumn(this);
+        return Task.CompletedTask;
+    }
+
+    public object GetValue(TItem item)
+    {
+        return _getValue(item);
+    }
+
+    public async Task ItemChecked(TItem item, ChangeEventArgs args)
+    {
+        var value = (bool)args.Value;
+        await CheckedChanged.InvokeAsync(Tuple.Create(item, value));
+        await DataTable.ItemChecked(this, value);
+    }
+
+    public Task SetCheckedValue(bool value)
+    {
+        Checked = value;
+        return Task.CompletedTask;
+    }
+    
+    public bool IsDisabledValue(TItem item)
+    {
+        return _disabledExpression is not null &&  _getDisabledValue(item);
+    }
+
+    public void Dispose()
+    {
+        DataTable.RemoveColumn(this);
+    }
+
+    private Task OnHeaderClicked()
+    {
+        if (!AllowSorting || !DataTable.AllowSorting)
+        {
+            return Task.CompletedTask;
+        }
+        var sortOrder = DataTable.SortColumn?.Item2 == GridSortOrder.Ascending ? GridSortOrder.Descending : GridSortOrder.Ascending;
+        return DataTable.HeaderClicked(Field, _getValue, sortOrder);
+    }
+
+    private Task OnCheckedChange(ChangeEventArgs args)
+    {
+        Checked = (bool)args.Value;
+        return DataTable.CheckboxChanged(this, Checked);
+    }
+
+    private Task OnClearSelectionClicked()
+    {
+        Checked = false;
+        return DataTable.ClearSelection(this, Checked);
+    }
+}

@@ -1,0 +1,242 @@
+@using ChargesWFM.UI.Components.Controls
+@using ChargesWFM.UI.Models
+@using ChargesWFM.UI.Services
+@using Microsoft.Extensions.Logging
+@using System.Threading
+
+@inject AuthenticationStateProvider AuthProvider
+@inject ILocalStorageService LocalStorageService
+@inject NavigationManager NavManager
+@inject IProjectGroupSelectionService ProjectGroupSelectionService
+@* @inject IWorkAllocationService WorkAllocationService*@
+@inject ILogger<ProjectGroupSelection> Logger
+@inject IMatToaster Toaster
+
+<EditForm Model="@SelectedProjectGroupPlacement">
+    <div class="row">
+        <div class="col-6 ps-0">
+            <AutoComplete TItem="ProcessClients" Items="@ProcessClients"
+                ValueExpression="processClient => processClient.Client" SelectedItem="@selectedProcessClient"
+                SelectedItemChanged="@OnProcessClientChanged" Placeholder="Client">
+            </AutoComplete>
+        </div>
+        <div class="col-6 ps-0">
+            <AutoComplete TItem="NexgenProjectGroups" Items="@ProjectGroups"
+                ValueExpression="projectGroup => projectGroup.ProjectGroupName" SelectedItem="@selectedProjectGroup"
+                SelectedItemChanged="@OnProjectGroupChanged" Placeholder="Project Group">
+            </AutoComplete>
+        </div>
+    </div>
+</EditForm>
+
+
+@code 
+{
+    @inject NavigationManager NavigationManager;
+
+    private class ProjectGroupPlacement
+    {
+        public NexgenProjectGroups? SelectedProjectGroup { get; set; }
+    }
+
+    private ProjectGroupPlacement SelectedProjectGroupPlacement { get; set; } = new ProjectGroupPlacement();
+    private IEnumerable<ProcessClients> ProcessClients { get; set; } = Enumerable.Empty<ProcessClients>();
+    private IEnumerable<NexgenProjectGroups> ProjectGroups { get; set; } = Enumerable.Empty<NexgenProjectGroups>();
+    private IEnumerable<string> ClientLogins { get; set; } = Enumerable.Empty<string>();
+    private ProcessClients? selectedProcessClient;
+    private NexgenProjectGroups? selectedProjectGroup;
+    private string? selectedClientLogin;
+    private const string LOCAL_STORAGE_KEY = "ClientLogin";
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; }
+
+    [Parameter]
+    public EventCallback<NexgenProjectGroups> onProjectGroupChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessClients> onProjectProcessChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> onClientLoginChanged { get; set; }
+
+    [Parameter]
+    public bool IsClientVisible { get; set; } = false;
+
+    private int employeeId { get; set; }
+
+    [Inject]
+    HttpClient Http { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var getUser = await LocalStorageService.GetAsync<AuthenticatedUser>();
+        if(getUser != null)
+        {
+            employeeId = getUser.EmployeeId;
+        }
+        var processClient = await LocalStorageService.GetAsync<ProcessClients>();
+        var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+        await GetProcessClients();
+        if (processClient != null && projectGroup != null)
+        {
+            await LoadProjectGroups(processClient);
+            selectedProcessClient = processClient;
+            selectedProjectGroup = projectGroup;
+        }
+        StateHasChanged();
+    }
+
+    private async Task GetProcessClients()
+    {
+        var AuthState = (AuthStateProvider)AuthProvider;
+        ProcessClients = await
+        ApiHelper.GetUsingMsgPackAsync<ProcessClients[]>("/NexgenProjectGroup/GetProcessClients/EmployeeID/" + employeeId, Http,
+        AuthState.Token);
+        await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+    }
+    private async Task OnProjectGroupActiveChanged(ProjectGroup projectGroup, ProcessClients processClient)
+    {
+        var localStorageProjectGroup = await LocalStorageService.GetAsync<ProjectGroup>();
+        StateHasChanged();
+    }
+
+    private async Task OnProcessClientChanged(ProcessClients processClient)
+    {
+        if (processClient == null)
+        {
+            await ClearSelectedProcessClient();
+            ProjectGroups = Enumerable.Empty<NexgenProjectGroups>();
+            ClientLogins = Enumerable.Empty<string>();
+            ProjectGroupSelectionService.OnProcessClientChanged(null);
+            // await onProjectProcessChanged.InvokeAsync(null);
+            return;
+        }
+        selectedProcessClient = processClient;
+        //await ClearSelectedProjectGroup();
+        //await ClearSelectedClientLogin();
+        await LoadProjectGroups(processClient);
+        await LocalStorageService.SetAsync(processClient);
+        @* ProjectGroupSelectionService.OnProcessClientChanged(processClient);
+        await onProjectProcessChanged.InvokeAsync(processClient); *@
+        StateHasChanged();
+    }
+
+    private async Task LoadProjectGroups(ProcessClients processClient)
+    {
+        var AuthState = (AuthStateProvider)AuthProvider;
+        //var pro = await this.LocalStorageService.GetAsync<ProcessClients>();
+        ProjectGroups = await
+        ApiHelper.GetUsingMsgPackAsync<NexgenProjectGroups[]>("/NexgenProjectGroup/GetProjectGroups/ProcessID/" +
+        processClient.ProcessID + "/ClientID/" + processClient.ClientID + "/DepartmentID/" + processClient.DepartmentID +
+        "/EmployeeID/" + this.employeeId, Http,
+        AuthState.Token);
+        if (ProjectGroups.Any())
+        {
+            var localStorageProcessClient = await LocalStorageService.GetAsync<ProcessClients>();
+            if(selectedProcessClient != null && localStorageProcessClient != null)
+            {   
+                if(selectedProcessClient.Client != localStorageProcessClient.Client)
+                {
+                    selectedProjectGroup = ProjectGroups?.FirstOrDefault();
+                    await OnProjectGroupChanged(selectedProjectGroup);
+                }
+                else
+                {
+                    var localStorageProjectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+                    if(localStorageProjectGroup != null)
+                    {
+                        selectedProjectGroup = localStorageProjectGroup;
+                        await OnProjectGroupChanged(selectedProjectGroup);
+                    }
+                    else
+                    {
+                        selectedProjectGroup = ProjectGroups?.FirstOrDefault();
+                        await OnProjectGroupChanged(selectedProjectGroup);
+                    }
+                }                
+            }
+            else if(selectedProcessClient == null || localStorageProcessClient == null)
+            {
+                var localStorageProjectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+                if(localStorageProjectGroup != null)
+                {
+                    selectedProjectGroup = localStorageProjectGroup;
+                    await OnProjectGroupChanged(selectedProjectGroup);
+                }
+                else
+                {
+                    selectedProjectGroup = ProjectGroups?.FirstOrDefault();
+                    await OnProjectGroupChanged(selectedProjectGroup);
+                }
+                
+            }
+            else
+            {
+                selectedProjectGroup = ProjectGroups?.FirstOrDefault();
+                await OnProjectGroupChanged(selectedProjectGroup);
+            }
+            @* selectedProjectGroup = ProjectGroups?.FirstOrDefault();
+            await OnProjectGroupChanged(selectedProjectGroup);
+             *@
+            
+        }
+        else
+        {
+            Toaster.Add("Project group is not configured..?", MatToastType.Warning, "");
+            await OnProjectGroupChanged(null);
+        }
+
+        await InvokeAsync(() => StateHasChanged()).ConfigureAwait(false);
+        StateHasChanged();
+    }
+
+    private async Task ClearSelectedProcessClient()
+    {
+        selectedProcessClient = null;
+        await LocalStorageService.DeleteAsync<ProcessClients>();
+        selectedProjectGroup = null;
+        await LocalStorageService.DeleteAsync<NexgenProjectGroups>();
+        await ClearSelectedProjectGroup();
+        await GetProcessClients();
+        var pclient = ProcessClients?.FirstOrDefault();
+        await OnProcessClientChanged(pclient);
+        await LoadProjectGroups(pclient);
+        var pgroup = ProjectGroups?.FirstOrDefault();
+        await OnProjectGroupChanged(pgroup);
+    }
+
+    private async Task OnProjectGroupChanged(NexgenProjectGroups projectGroup)
+    {
+        if (projectGroup == null)
+        {
+            selectedProjectGroup = null;
+            await LocalStorageService.DeleteAsync<NexgenProjectGroups>();
+            ClientLogins = Enumerable.Empty<string>();
+            ProjectGroupSelectionService.OnProjectGroupChanged(null);
+            //ProjectGroupPlacementSelectionService.OnClientLoginChanged(null);
+            await onProjectGroupChanged.InvokeAsync(null);
+            await onClientLoginChanged.InvokeAsync(null);
+            StateHasChanged();
+            return;
+        }
+        //await ClearSelectedClientLogin();
+        selectedProjectGroup = projectGroup;        
+        await LocalStorageService.SetAsync(projectGroup);
+        ProjectGroupSelectionService.OnProjectGroupChanged(projectGroup);
+        //_ = LoadProjectGroupClientLogin(projectGroup.Id);
+        await onProjectGroupChanged.InvokeAsync(projectGroup);
+        StateHasChanged();
+    }
+
+    private async Task ClearSelectedProjectGroup()
+    {
+        selectedProjectGroup = null;
+        await LocalStorageService.DeleteAsync<NexgenProjectGroups>();
+        var processClient = await LocalStorageService.GetAsync<ProcessClients>();
+        StateHasChanged();
+        // if (processClient != null)
+        //   await LoadProjectGroups(processClient); 
+        //await ClearSelectedClientLogin();
+    }
+}

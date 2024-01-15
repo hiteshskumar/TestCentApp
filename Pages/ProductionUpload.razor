@@ -1,0 +1,673 @@
+@page "/productionupload"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Services;
+@using Microsoft.AspNetCore.SignalR.Client;
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Authorization;
+
+@using Microsoft.Extensions.Logging;
+@using Microsoft.Extensions.Configuration
+@using Microsoft.JSInterop;
+@using BlazorDownloadFile;
+@using DocumentFormat.OpenXml;
+@using MatBlazor;
+@using MessagePack;
+@inject ILogger<ProductionUpload> Logger
+@inject IConfiguration Configuration
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IJSRuntime JSRuntime;
+@using System;
+@using System.Data;
+@using System.Linq;
+@using System.Collections.Generic;
+@using System.Threading.Tasks;
+
+<ContentWrapper Header="Production Upload" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"  Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+     <AuthorizeView Policy="ProductionUploadAccess">
+        <Authorized Context="Auth">
+            <PageHeading Title = "Production Upload"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <section class="card">
+                    <div class="upload-container mt-2">
+                        <div class="upload-box">
+                            <div class="dropdown-box">
+                                <span>Drag a file(s) below or select from below</span>
+                                <MatFileUpload OnChange="@OnProductionFileSelected" Label="Select File" AllowMultiple="false" disabled="@displayFileLoading"></MatFileUpload>
+                            </div>
+                            <span>Total Files: @selectedFiles.Count()</span>
+                        </div>
+                        <div class="vl"></div>
+                        <div class="upload-files-box">
+                            <h4 class="text-center mt-0"><i class="fa fa-file pe-1"></i>Upload Files</h4>
+                            <hr class="m-0">
+                            <ul>
+                            <LoadingScreen Message="Reading" Enabled="@displayFileLoading">
+                                @foreach (var file in selectedFiles)
+                                {
+                                    <li>
+                                        <div class="upload-file">
+                                            <div class="upload-file-details">
+                                                <div>
+                                                    <span class="text-primary">@file.Name</span>
+                                                </div>
+                                                <div>
+                                                    <span class="text-secondary">Excel</span>, <span class="text-secondary">@FormatSize(file.Size)</span>
+                                                </div>
+                                            </div>
+                                            <span class="align-self-center"><i class="fa fa-times text-danger" role="button" @onclick="@(e => RemoveFile(file))"></i></span>
+                                        </div>
+                                    </li>
+                                }
+                            </LoadingScreen>
+                            </ul> 
+                            <div class="upload-button-group">                                 
+                                <button type="button" class="btn btn-sm btn-success-c" title="Upload" disabled="@disableUploadButtons" @onclick="(e => OnUploadButtonClicked())">
+                                   <i class="fa fa-upload"></i> Upload
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" title="Clear" @onclick="(e => OnClearButtonClicked())" disabled="@disableUploadButtons">
+                                  <i class="fa fa-times"></i>  Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>                    
+                    <div class="d-flex justify-content-end mx-auto my-0 py-1" style="width: 60%;">                     
+                        <span class="text-primary font-size-c" role="button" @onclick="DownloadProductionUploadTemplateAsync"><i class="fa fa-download text-primary"></i> Download Production Upload Template</span>                    
+                    </div>      
+                    <div hidden="@(isHide)">
+                    <Grid TItem="ProductionUploadSummaries" @bind-SortColumn="sortColumn" Items="@_productionUploadSummaries" AllowFiltering="false"
+                        AllowSorting="true" PageSize="10" MinimumHeight="0vh">
+                        <GridColumns>
+                            <GridColumn TItem="ProductionUploadSummaries" Field="@nameof(ProductionUploadSummaries.UploadedBy)" Title="Uploaded By"
+                                ValueExpression="@(Item => Item.UploadedBy)" AllowFiltering="false" AllowSorting="true">
+                            </GridColumn>
+
+                            <GridColumn TItem="ProductionUploadSummaries" Field="@nameof(ProductionUploadSummaries.ProductionBy)" Title="Production By"
+                                ValueExpression="@(Item => Item.ProductionBy)" AllowFiltering="false"
+                                AllowSorting="true">
+                            </GridColumn>
+
+                            <GridColumn TItem="ProductionUploadSummaries" Field="@nameof(ProductionUploadSummaries.ProductionDate)" Title="Production Date"
+                                ValueExpression="@(Item => Item.ProductionDate)" AllowFiltering="false" AllowSorting="true">
+                            </GridColumn>
+
+                            <GridColumn TItem="ProductionUploadSummaries" Field="@nameof(ProductionUploadSummaries.ProductionCount)" Title="ProductionCount"
+                                ValueExpression="@(Item => Item.ProductionCount)" AllowFiltering="false" AllowSorting="true">
+                            </GridColumn>
+
+                            <GridColumn TItem="ProductionUploadSummaries" Field="@nameof(ProductionUploadSummaries.UpdatedDateTimeIST)" Title="UpdatedDateTimeIST"
+                                ValueExpression="@(Item => Item.UpdatedDateTimeIST)" AllowFiltering="false" AllowSorting="true">
+                            </GridColumn>
+                        </GridColumns>
+                    </Grid>
+
+                </div>              
+                </section>
+            </ProgressScreen>
+        </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView>
+</ContentWrapper>
+
+@code {
+        private bool isEnabled = false;
+        private bool displayLoading;
+        private bool displayFileLoading;
+        private bool displayMessageScreen;
+        private bool disableUploadButtons = true;
+        private string? progressText { get; set; }
+
+        [Inject]
+        HttpClient Http { get; set; }
+        [Inject]
+        AuthenticationStateProvider? AuthProvider { get; set; }
+        [Inject]
+        ILocalStorageService? LocalStorageService { get; set; }
+        @* [Inject]
+        IJSRuntime? JSRuntime { get; set; } *@
+        private HubConnection? hubConnection;
+        
+        [CascadingParameter]
+        public Task<AuthenticationState> AuthState { get; set; }
+
+        [Inject]
+        IMatToaster? ToasterService { get; set; }
+        private NexgenProjectGroups[]? _nexgenProjectGroups = Array.Empty<NexgenProjectGroups>();
+        private ProductionUploadTemplate[]? _productionUploadTemplate = Array.Empty<ProductionUploadTemplate>();
+        private IEnumerable<UploadConfiguration> _uploadConfiguration = Enumerable.Empty<UploadConfiguration>();
+        private ProductionUploadSummaries[]? _productionUploadSummaries = Array.Empty<ProductionUploadSummaries>();
+            
+        private int EmployeeID {get;set;}
+        private int ProjectGroupID {get;set;}
+        private string? ProjectGroupName {get;set;}
+        private string? SchemaName {get;set;}
+        private Boolean ShowGrid = true;   
+        private readonly IList<UploadFileDetails> selectedFiles = new List<UploadFileDetails>();  
+        private string? uploadButtonHelpText { get; set; }
+        private string? clearButtonHelpText { get; set; }      
+        private NexgenProjectGroups? projectgrp;
+        private string? placementHubGroup;
+        private string? message { get; set; }
+        private int ScreenID;
+        private string? UploadType = string.Empty;
+        private Tuple<string, GridSortOrder>? sortColumn;
+        private bool isHide = true;
+
+        protected override async Task OnInitializedAsync()
+        {
+            try
+            {
+                DisplayLoading(true, "Loading");
+                var user = await LocalStorageService.GetAsync<AuthenticatedUser>();                
+                EmployeeID = user.EmployeeId;             
+                var state = await AuthState;
+                if (!state.User.Identity.IsAuthenticated)
+                {
+                    return;
+                }
+                await InitiateHubConnection();
+                DisplayLoading(false);
+            }
+            catch (Exception ex)
+            {
+                ToasterService.Add( ex.Message.ToString(), MatToastType.Danger, "Production Upload");
+                DisplayLoading(false);
+            }
+        }
+
+        private Task InitiateHubConnection()
+        {
+            var uri = new Uri(new Uri(Configuration["Api"]), "mainhub");
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(uri, options => options.AccessTokenProvider = () =>  LocalStorageService.GetAsync<string>("Token"))
+                .AddMessagePackProtocol()
+                .WithAutomaticReconnect()
+                .Build();
+            hubConnection.HandshakeTimeout = TimeSpan.FromSeconds(5);
+            hubConnection.Reconnected += OnHubConnectionReconnected;
+            hubConnection.Closed += OnHubConnectionClosed;
+            hubConnection.On<UploadProgress>(nameof(UploadProgress), OnUploadProgress);
+            hubConnection.On<string>(nameof(ProjectGroupSelected), OnProjectGroupSelected);
+            return hubConnection.StartAsync();
+        }
+        private void OnProjectGroupSelected(string groupName)
+        {
+            placementHubGroup = groupName;
+        }
+        private async Task OnUploadProgress(UploadProgress progress)
+        {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            progressText = progress.Message;
+            if(progress.IsTemplateError)
+            {
+                DisplayLoading(false);
+                uploadButtonHelpText = "Click to upload";
+                clearButtonHelpText = "Clears all the selected files";
+                message = string.Empty;
+                displayMessageScreen = false;
+                ToasterService.Add(progress.Message, MatToastType.Danger, "Production Upload: " + nameof(ProductionUpload));
+                await DownloadProductionUploadErrorFile(progress.FilePathName);
+            }
+            else if (progress.IsCompleted)
+            {
+                selectedFiles.Clear();
+                ToasterService.Add(progress.Message, MatToastType.Success, nameof(ProductionUpload));
+                _productionUploadSummaries = await ApiHelper.GetUsingMsgPackAsync<ProductionUploadSummaries[]>($"/productionupload/GetProductionUploadSummaries/EmployeeID/{this.EmployeeID}/ProjectGroupID/{this.ProjectGroupID}/SchemaName/{this.SchemaName}",  Http, AuthState.Token);
+                isHide = false;    
+                DisplayLoading(false);
+                uploadButtonHelpText = "Please select files to upload";
+                clearButtonHelpText = "No files selected";
+                message = string.Empty;
+                displayMessageScreen = false;
+                await JSRuntime.InvokeVoidAsync("clearUploadedFile");
+            }
+            else if (progress.IsFailed)
+            {
+                DisplayLoading(false);
+                ToasterService.Add(progress.Message, MatToastType.Danger, nameof(ProductionUpload));
+                uploadButtonHelpText = "Click to upload";
+                clearButtonHelpText = "Clears all the selected files";
+                message = string.Empty;
+                displayMessageScreen = false;
+            }
+            else
+            {
+                var user = (await AuthState).User;
+                var employeeId = int.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+
+                if (employeeId != progress.UploadedById)
+                {
+                    message = "Another upload in progress. Upload is currently disabled.";
+                    displayMessageScreen = true;
+                }
+            }
+            StateHasChanged(); 
+        }
+        private async Task ProjectGroupSelected()
+        {
+            while (true)
+            {
+                if (hubConnection.State != HubConnectionState.Connected)
+                {
+                    Logger.LogDebug($"Waiting to register user. Hub connection state is {hubConnection.State}");
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    continue;
+                }
+
+                await hubConnection.SendAsync(nameof(ProjectGroupSelected), this.ProjectGroupID, placementHubGroup);
+                break;
+            }
+        }
+        private void DisplayLoading(bool display, string? progressMessage = null)
+        {
+            displayLoading = display;
+            progressText = progressMessage ?? string.Empty;
+            StateHasChanged();
+        }
+        private async Task DownloadProductionUploadTemaplate()
+        {
+            
+             try
+             {
+                DisplayLoading(true, "Loading");
+                var AuthState = (AuthStateProvider)AuthProvider;
+                _productionUploadTemplate = await ApiHelper.GetUsingMsgPackAsync<ProductionUploadTemplate[]>($"/ProductionUpload/GetProductionUploadTemplate/EmployeeID/{this.EmployeeID}/ProjectGroupID/{this.ProjectGroupID}", Http, AuthState.Token); 
+                DisplayLoading(false);                      
+             }
+             catch(Exception ex)
+             {
+               Logger.LogError(ex, ex.Message);
+               ToasterService.Add(ex.InnerException.Message.ToString(), MatToastType.Danger, "Production Upload");
+               DisplayLoading(false); 
+             }            
+             finally
+             {
+                
+             }
+        }
+
+        private async Task DownloadProductionUploadTemplateAsync()
+        {   
+            try 
+            {
+                DisplayLoading(true, "Loading");
+                await DownloadProductionUploadTemaplate();
+                var headers = _productionUploadTemplate
+                .Select((column, i) => column.DisplayName)
+                .ToArray();
+                var bytes = await ExcelPackage.GenerateTemplateAsync(headers);
+                await BlazorDownloadFileService.DownloadFile("ProductionUploadTemplate.xlsx", bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            }
+            catch(Exception ex)
+            {
+               Logger.LogError(ex, ex.Message);
+               ToasterService.Add(ex.InnerException.Message.ToString(), MatToastType.Danger, "Production Upload");
+               DisplayLoading(false); 
+            }            
+            finally
+            {
+                DisplayLoading(false);  
+            }
+        }
+        protected async Task OnProjectGroupChanged(NexgenProjectGroups pg) 
+        {
+            try
+            {
+                //await LoadDataAsync(placement);
+                DisplayLoading(true, "Loading");
+                this.ProjectGroupID = pg.ProjectGroupID;
+                this.ProjectGroupName = pg.ProjectGroupName;
+                this.SchemaName = pg.SchemaName;
+                this.disableUploadButtons = true;
+                this.selectedFiles.Clear();
+                
+                var user = await LocalStorageService.GetAsync<AuthenticatedUser>();  
+                ScreenID = user.Screens.Where(exp=>exp.Name == "Production Upload").Select(e=>e.Id).FirstOrDefault();
+                var token = await LocalStorageService.GetAsync<string>("Token");            
+                _uploadConfiguration = await ApiHelper.GetUsingMsgPackAsync<IEnumerable<UploadConfiguration>>("/productionupload/GetUploadConfiguration/ProjectGroupID/"+ this.ProjectGroupID + "/ScreenID/" + ScreenID, Http, token);
+                if(_uploadConfiguration.Count() != 0)
+                {
+                    UploadType = _uploadConfiguration.Where(exp=>exp.ScreenID == ScreenID).Select(exp=>exp.UploadType).FirstOrDefault();
+                }
+                DisplayLoading(false);    
+                //await this.DownloadProductionUploadTemaplate();
+                //await this.DownloadProductionUploadTemplateAsync();
+                await ProjectGroupSelected();
+            }
+            catch (Exception ex)
+            {
+                displayMessageScreen = true;
+                message = "Error occured. Please try reloading the page.";
+                Logger.LogError(ex.Message, ex);
+                DisplayLoading(false);
+            }
+            finally
+            {
+                DisplayLoading(false);
+            }
+               
+        }
+        private async Task OnHubConnectionReconnected(string connectionId)
+        {
+            await ProjectGroupSelected();
+        }
+
+        private Task OnHubConnectionClosed(Exception ex)
+        {
+            if (ex != null)
+            {
+                Logger.LogError(ex, ex.Message);
+            }
+
+            return Task.CompletedTask;
+        }
+        private async Task OnClearButtonClicked()
+        {
+        selectedFiles.Clear();
+        DisableUploadButtons();
+        uploadButtonHelpText = "Please select files to upload";
+        clearButtonHelpText = "No files selected";
+        await JSRuntime.InvokeVoidAsync("clearUploadedFile");
+        } 
+        private async Task DownloadProductionUploadErrorFile(string fileName)
+        {
+            var AuthState = (AuthStateProvider)AuthProvider;
+            var response = await ApiHelper.PostUsingMsgPackAsync<Reports>("/productionupload/DownloadProductionUploadErrorFile", fileName, Http, AuthState.Token);            
+            await BlazorDownloadFileService.DownloadFile("ErrorProductionUploadTemplate.xlsx", response.FileByteArray, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
+        private async Task OnProductionFileSelected(IMatFileUploadEntry[] files)
+        {
+        displayFileLoading = true;
+        StateHasChanged();
+        DisableUploadButtons();
+        this.isHide = true;
+        var uploadFiles = new List<Tuple<string, byte[]>>();
+        // TODO: Validate the selected file(s) is/are an excel file(s) and has the proper upload template
+        foreach (var file in files)
+        {
+            try
+            {
+                if (selectedFiles.Any(selectedFile => selectedFile.Name.Equals(file.Name, StringComparison.CurrentCultureIgnoreCase) && selectedFile.Size == file.Size))
+                {
+                    ToasterService.Add($"{file.Name} is already added", MatToastType.Warning, "Production Upload");
+                    continue;
+                }
+                using var stream = new MemoryStream();
+                await file.WriteToStreamAsync(stream);
+                stream.Seek(0, SeekOrigin.Begin);
+                uploadFiles.Add(Tuple.Create(file.Name, stream.ToArray()));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, ex.Message);
+            }
+        }
+        ReadExcelStreams(uploadFiles);
+        displayFileLoading = false;
+        if (selectedFiles.Count > 0)
+        {
+            DisableUploadButtons(false);
+            uploadButtonHelpText = "Click to upload";
+            clearButtonHelpText = "Clears all the selected files";
+        }
+        StateHasChanged();
+    }
+    private void ReadExcelStreams(IEnumerable<Tuple<string, byte[]>> uploadFiles)
+    {
+        foreach (var (filename, bytes) in uploadFiles)
+        {
+            try
+            {
+                var uploadFile = new UploadFileDetails
+                {
+                    Name = filename,
+                    Size = bytes.Length,
+                    Bytes = bytes,
+                };
+                selectedFiles.Add(uploadFile);
+            }
+            catch (Exception ex)
+            {
+                ToasterService.Add(ex.Message, MatToastType.Danger, "Production Upload");
+                Logger.LogError(ex, ex.Message);
+            }
+        }
+    }
+     private async Task OnUploadButtonClicked()
+    {
+        try
+        { 
+            StateHasChanged();
+            if(UploadType == "SignalR")
+            {
+                if (hubConnection.State != HubConnectionState.Connected)
+                {
+                    ToasterService.Add("Unable to connect to the upload service. Please try refreshing the page.", MatToastType.Danger, "Production Upload : " + nameof(ProductionUpload));
+                    return;
+                }
+            }
+            
+            DisplayLoading(true, "Uploading Production");
+            DisableUploadButtons();
+            uploadButtonHelpText = "Uploading file(s)";
+            clearButtonHelpText = "Clears all the selected files";
+            if (selectedFiles.Count == 0)
+            {
+                ToasterService.Add("Please select a file to upload", MatToastType.Warning, "Production Upload : " + nameof(ProductionUpload));
+                return;
+            }
+            var user = (await AuthState).User;
+            var employeeId = int.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+            var projectGroup = await LocalStorageService.GetAsync<NexgenProjectGroups>();
+            var token = await LocalStorageService.GetAsync<string>("Token");            
+            var uploadFile = new ProductionUploadFile
+            {
+                Files = selectedFiles.AsEnumerable(), 
+                ProjectGroupId = projectGroup.ProjectGroupID,
+                UploadedBy = employeeId,
+                SchemaName = projectGroup.SchemaName
+            };
+      
+            if(UploadType == "API" || string.IsNullOrEmpty(UploadType))
+            {
+                 var response = await ApiHelper.PostUsingMsgPackAsync<Reports>("/productionupload/ProductionUploadHelper", uploadFile, Http, token);
+                 if (response != null)
+                 {
+                    if(response.Status == "Error") {
+                        ToasterService.Add("Upload Template Contains Error", MatToastType.Danger, "Production Upload ");
+                        await BlazorDownloadFileService.DownloadFile($"{response.FileName}.xlsx", response.FileByteArray, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");                        
+                        DisableUploadButtons(false);
+                        DisplayLoading(false);
+                        uploadButtonHelpText = "Click to upload";
+                        clearButtonHelpText = "Clears all the selected files";
+                        await OnClearButtonClicked();
+                    }
+                    if(response.Status == "Success") {
+                        _productionUploadSummaries = await ApiHelper.GetUsingMsgPackAsync<ProductionUploadSummaries[]>($"/productionupload/GetProductionUploadSummaries/EmployeeID/{this.EmployeeID}/ProjectGroupID/{this.ProjectGroupID}/SchemaName/{this.SchemaName}",  Http, token);
+                        isHide = false;  
+                        ToasterService.Add("Production Upload Completed", MatToastType.Success, "Production Upload ");
+                        DisableUploadButtons(false);
+                        DisplayLoading(false);
+                        uploadButtonHelpText = "Click to upload";
+                        clearButtonHelpText = "Clears all the selected files";
+                        await OnClearButtonClicked();
+                    }
+                    if(response.Status != "Success" && response.Status != "Error") 
+                    {
+                        ToasterService.Add(response.Status, MatToastType.Danger, "Production Upload");
+                        DisableUploadButtons(false);
+                        DisplayLoading(false);
+                        uploadButtonHelpText = "Click to upload";
+                        clearButtonHelpText = "Clears all the selected files";
+                        await OnClearButtonClicked();
+                    }
+                    if(response == null) 
+                    {
+                        ToasterService.Add("Failed to production upload", MatToastType.Danger, "Production Upload");
+                        DisableUploadButtons(false);
+                        DisplayLoading(false);
+                        uploadButtonHelpText = "Click to upload";
+                        clearButtonHelpText = "Clears all the selected files";
+                         await OnClearButtonClicked();
+                    }
+                 }
+            }
+           
+            if(UploadType == "SignalR")
+            {
+                var response = await ApiHelper.PostUsingMsgPackAsync("/productionupload/productionupload", uploadFile, Http, token);
+                 if(response == null) 
+                 {
+                    ToasterService.Add("Failed to production upload", MatToastType.Danger, "Production Upload");
+                    DisableUploadButtons(false);
+                    await OnClearButtonClicked();
+                    DisplayLoading(false);
+                    uploadButtonHelpText = "Click to upload";
+                    clearButtonHelpText = "Clears all the selected files";
+                 }
+                 @* else
+                 {
+                    _productionUploadSummaries = await ApiHelper.GetUsingMsgPackAsync<ProductionUploadSummaries[]>($"/productionupload/GetProductionUploadSummaries/EmployeeID/{this.EmployeeID}/ProjectGroupID/{this.ProjectGroupID}",  Http, token);
+                    isHide = false;                        
+                 } *@
+            }
+        }
+        catch (Exception ex)
+        {
+            ToasterService.Add(ex.Message, MatToastType.Danger, "Production Upload");
+            DisableUploadButtons(false);
+            await OnClearButtonClicked();
+            DisplayLoading(false);
+            uploadButtonHelpText = "Click to upload";
+            clearButtonHelpText = "Clears all the selected files";
+            Logger.LogError(ex, ex.Message);
+        }
+    }
+    private async Task RemoveFile(UploadFileDetails entry)
+    {
+        selectedFiles.Remove(entry);
+        DisableUploadButtons(selectedFiles.Count == 0);
+        await JSRuntime.InvokeVoidAsync("ClearUploadedFileByName",entry.Name);
+    }
+    private void DisableUploadButtons(bool disable = true)
+    {
+        disableUploadButtons = disable;
+    }
+    private string FormatSize(long size)
+    {
+        if (size < 1024)
+        {
+            return $"{size}b";
+        }
+        else if (size < (1024 * 1024))
+        {
+            return $"{size / 1024.0:0.##}kb";
+        }
+        else
+        {
+            return $"{size / (1024.0 * 1024.0):0.##}mb";
+        }
+    }
+    [MessagePackObject]
+    public class ProductionUploadFile
+    {
+        [Key(0)]
+        public IEnumerable<UploadFileDetails> Files { get; set; }
+        [Key(1)]
+        public bool CanSystemResolve { get; set; }
+        [Key(2)]
+        public bool UnassignAccounts { get; set; }
+        [Key(3)]
+        public int ProjectGroupId { get; set; }
+        [Key(4)]
+        public int PlacementId { get; set; }
+        [Key(5)]
+        public int UploadedBy { get; set; }
+        [Key(6)]
+        public string SchemaName { get; set; }
+        [Key(7)]
+        public bool IsAppendAccounts { get; set; }
+        [Key(8)]
+        public int UploadTemplateID { get; set; }
+        [Key(9)]
+        public string? AllocationMethod {get;set;}
+        [Key(10)]
+        public bool AllocateToSkipAccounts { get; set; }
+        [Key(11)]
+        public bool AllocateToPreviouslyWorkedAgents { get; set; }
+        [Key(12)]
+        public int NumberOfDays { get; set; }
+    }
+    [MessagePackObject]
+    public class UploadFileDetails
+    {
+        [Key(0)]
+        public string Name { get; set; }
+        [Key(1)]
+        public long Size { get; set; }
+        [Key(2)]
+        public byte[] Bytes { get; set; }
+    }
+    [MessagePackObject]
+    public class Reports
+    {
+        [Key(0)]
+        public byte[] FileByteArray { get; set; }
+
+        [Key(1)]
+        public string? FileName { get; set; }
+
+        [Key(2)]
+        public string? Status { get; set; }
+
+        [Key(3)]
+        public long ProductionUploadSummaryID { get; set; }
+
+        [Key(4)]
+        public IEnumerable<ErrorDetail> ErrorDetail { get; set; } = null!;
+
+        [Key(5)]
+        public int NoOfRowsAffected { get; set; }
+        
+        [Key(6)]
+        public int StatusID { get; set; }
+
+    }
+    [MessagePackObject]
+     public class UploadConfiguration
+     {
+        [Key(0)]
+        public long UploadConfigurationID { get; set; }
+        
+        [Key(1)]
+        public int ProjectGroupID { get; set; }
+
+        [Key(2)]
+        public int ScreenID { get; set; }
+
+        [Key(3)]
+        public string? UploadType { get; set; }
+
+        [Key(4)]
+        public int NumberOfDays  { get; set; }
+    }
+    [MessagePackObject]
+     public class ProductionUploadSummaries
+     {
+        [Key(0)]
+        public string? UploadedBy { get; set; }
+        [Key(1)]
+        public string? ProductionBy { get; set; }
+        [Key(2)]
+        public DateTime ProductionDate { get; set; }
+        [Key(3)]
+        public int ProductionCount { get; set; }
+        [Key(4)]
+        public DateTime UpdatedDateTimeIST { get; set; }
+     }
+  
+}
+

@@ -1,0 +1,146 @@
+@page "/manualassign"
+
+@using ChargesWFM.UI.Models;
+@using ChargesWFM.UI.Components.GridComponent;
+@using ChargesWFM.UI.Components.Controls;
+@using ChargesWFM.UI.Services;
+@inherits LayoutComponentBase
+<style>
+    tbody tr td:last-child {
+    text-align: left !important;
+}
+</style>
+
+<ContentWrapper Header="Manual Assign" IsClientVisible="false" ProjectGroupChanged="OnProjectGroupChanged"
+    Level="ContentWrapper.PageAccessLevel.ProjectGroup">
+    @* <AuthorizeView Policy="ManualAssignAccess">
+        <Authorized Context="Auth">*@
+            <PageHeading Title="Manual Assign"></PageHeading>
+            <ProgressScreen Enabled="@displayLoading" DisplayText="@progressText">
+                <div class="card">
+                    <div class="row mt-2" hidden = "@(isShow)">                
+                        <div class="col-3 pe-0">
+                                    <label for="UploadTemplate">Upload Template Type</label>                        
+                                    <AutoComplete id="UploadTemplate" TItem="MAssign" 
+                                    SelectedItem="@_selectedUploadTemplate" Placeholder="Select Upload Template Type"
+                                    Items="@_UploadTemplateform" ValueExpression="@(value => value.UploadTemplateName)" 
+                                    SelectedItemChanged="@OnUploadTemplateSelected" 
+                                    AllowFreeText="false"></AutoComplete>   
+                        </div>                               
+                        <div class="col-3 pe-0">
+                                    <label for="ProcessEmployees">Assign To</label>                        
+                                    <AutoComplete id="ProcessEmployees" TItem="ProcessEmployee" 
+                                    SelectedItem="@_selectedProcessEmployee" Placeholder="Select Assign To"
+                                    Items="@_ProcessEmployeesform" ValueExpression="@(value => value.SigninName)" 
+                                    SelectedItemChanged="@OnProcessEmployeeSelected" 
+                                    AllowFreeText="false"></AutoComplete>   
+                        </div>    
+                        
+                        <div class="col-3 pe-0">
+                            <button type="button" class="btn btn-success btn-sm m-t-20"
+                            @onclick="@updateAccounts"><i class="fa fa-long-arrow-right" aria-hidden="true"></i>  Assign</button>
+                        </div>
+                        <div class="">
+                            <button type="button" class="btn btn-gradient-blue btn-addon btn-sm m-t-5" 
+                            @onclick="@(_ => btnDownload())"><i class="fa fa-file-excel mr-1"></i>Download to Excel</button>
+                        </div>                                                                                                
+                    </div>
+                    <div class="row mt-2" hidden = "@(isSGHide)">
+                        <div class="col-3 pe-0">
+                                    <label for="UploadTemplate">Upload Template Type</label>                        
+                                    <AutoComplete id="UploadTemplate" TItem="MAssign" 
+                                    SelectedItem="@_selectedUploadTemplate" Placeholder="Select Upload Template Type"
+                                    Items="@_UploadTemplateform" ValueExpression="@(value => value.UploadTemplateName)" 
+                                    SelectedItemChanged="@OnUploadTemplateSelected" 
+                                    AllowFreeText="false"></AutoComplete>   
+                        </div> 
+                        <div class="col-2 pe-0">
+                            <label>From Date</label>
+                            <input type="date" class="autocomplete-input rounded p-2" style="margin-top:-1px !important"
+                                value=item.FromDate @onchange="OnFromDateSelected" />
+                        </div>
+                        <div class="col-2 pe-0">
+                            <label>To Date</label>
+                            <input type="date" class="autocomplete-input rounded p-2" style="margin-top:-1px !important"
+                                value=item.ToDate @onchange="OnToDateSelected" />
+                        </div>
+                        <div class="col-3 pe-0">
+                                    <label for="ProcessEmployees">Assign To</label>                        
+                                    <AutoComplete id="ProcessEmployees" TItem="ProcessEmployee" 
+                                    SelectedItem="@_selectedProcessEmployee" Placeholder="Select Assign To"
+                                    Items="@_ProcessEmployeesform" ValueExpression="@(value => value.SigninName)" 
+                                    SelectedItemChanged="@OnProcessEmployeeSelected" 
+                                    AllowFreeText="false"></AutoComplete>   
+                        </div>
+                        <div class="col-2 pe-0">
+                            <button type="button" class="btn btn-success btn-sm m-t-20"
+                            @onclick="@GetBOTData">GetBOTData</button>
+                        
+                            <button type="button" class="btn btn-success btn-sm m-t-20"
+                            @onclick="@updateAccounts"><i class="fa fa-long-arrow-right" aria-hidden="true"></i>Assign</button>
+                        </div> 
+                    </div>                                                      
+                    <div>                         
+                        <div>
+                            <div hidden="@(isHide)">
+                                @if (_Accountinfo != null  && AccountProperty.Any() && AccountProperty != null)
+                                {
+                                    <Grid TItem="GetSearchAndCodeResult" @bind-SortColumn="sortColumn" Items="@_Accountinfo" AllowFiltering="true" AllowSorting="true" 
+                                    OnFilter="@OnFilter" SearchCriterias="@searchCriterias" CustomFilter="true" ItemsChanged="@OnItemsChanged" AllowExport = "false" MinimumHeight="75vh">
+                                        <GridColumns>
+                                            <GridCheckboxColumn TItem="GetSearchAndCodeResult" ValueExpression="@(item => item.IsChecked)" 
+                                                CheckedChanged="@OnCheckedChanged" BulkCheckedChanged="@OnBulkCheckedChanged" 
+                                                ClearSelection="@OnClearSelection"  AllowSorting="false" 
+                                                AllowFiltering="false" AllowClearingSelection="@_Accountinfo.Any(item => item.IsChecked)">
+                                            </GridCheckboxColumn>
+                                            @foreach (var item in AccountProperty)
+                                            {                                                
+                                                if(item.Item1.PropertyType==typeof(DateTime)||item.Item1.PropertyType==typeof(DateTime?))
+                                                {
+                                                    <GridDateTimeColumn @key="item" TItem="GetSearchAndCodeResult" Field="@item.Item2"  Title="@item.Item2"
+                                                        ValueExpression="@(_Accountinfo => item.Item1.GetValue(_Accountinfo))"
+                                                        SimpleFilter="false" FieldType="@item.Item1.PropertyType"
+                                                        AllowFiltering="true" AllowSorting="true">
+                                                    </GridDateTimeColumn>
+                                                }
+                                                else
+                                                {
+                                                    <GridColumn @key="item" TItem="GetSearchAndCodeResult" Field="@item.Item2" Title="@item.Item2"
+                                                        ValueExpression="@(_Accountinfo => item.Item1.GetValue(_Accountinfo))"
+                                                        SimpleFilter="false" FieldType="@item.Item1.PropertyType"
+                                                        AllowFiltering="true" AllowSorting="true">
+                                                    </GridColumn>
+                                                }                        
+                                            }
+                                        </GridColumns>
+                                    </Grid>
+                                }
+                            </div>
+                            <div hidden="@(isSGGridHide)">
+                                        <Grid TItem="GetValidationSGBOTGrid" Items="_ValidationSGGrid" 
+                                        @bind-SortColumn="sortColumn" AllowFiltering="true" AllowSorting="true" MinimumHeight="75vh">
+                                        <GridColumns>
+                                              <GridCheckboxColumn TItem="GetValidationSGBOTGrid" ValueExpression="@(item => item.IsBOTChecked)" 
+                                                CheckedChanged="@OnBOTCheckedChanged" BulkCheckedChanged="@OnBOTBulkCheckedChanged" 
+                                                ClearSelection="@OnBOTClearSelection"  AllowSorting="false" 
+                                                AllowFiltering="false" AllowClearingSelection="@_ValidationSGGrid.Any(item => item.IsBOTChecked)">
+                                            </GridCheckboxColumn>
+                                            <GridColumn TItem="GetValidationSGBOTGrid" Title="BatchName" ValueExpression="@(Item => Item.BatchName)" Field="@nameof(GetValidationSGBOTGrid.BatchName)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                            <GridColumn TItem="GetValidationSGBOTGrid" Title="TotalDocuments" ValueExpression="@(Item => Item.TotalDocuments)" Field="@nameof(GetValidationSGBOTGrid.TotalDocuments)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                            <GridColumn TItem="GetValidationSGBOTGrid" Title="TotalPages" ValueExpression="@(Item => Item.TotalPages)" Field="@nameof(GetValidationSGBOTGrid.TotalPages)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                            <GridColumn TItem="GetValidationSGBOTGrid" Title="Assigned" ValueExpression="@(Item => Item.Assigned)" Field="@nameof(GetValidationSGBOTGrid.Assigned)" AllowFiltering="true" AllowSorting="true"></GridColumn>
+                                        </GridColumns>
+                                        </Grid>
+                            </div> 
+                        </div>                        
+                    </div>
+                </div>
+            </ProgressScreen>
+        @* </Authorized>
+        <NotAuthorized>
+            <UnauthorizedComponent ModalDisplay="none"></UnauthorizedComponent>
+        </NotAuthorized>
+    </AuthorizeView> *@
+</ContentWrapper>
+
+

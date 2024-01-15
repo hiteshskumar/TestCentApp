@@ -1,0 +1,99 @@
+﻿@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavManager
+@using ChargesWFM.UI.Services
+@using System
+<div class="nano">
+    <div class="nano-content">
+        <ul>
+            <div class="logo"><a href="index.html">
+                    <span>Centaur WFM</span>
+                    <strong class="slide-menu-logo">WFM</strong>
+                </a>
+            </div>
+            <li onclick="toggleAngleDown(this)"><a class="sidebar-sub-toggle menu-icon-fix"><i class="fa fa-exchange"
+                        aria-hidden="true"></i>
+                    Transaction <span class="sidebar-collapse-icon ti-angle-down"></span></a>
+                <ul>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="manualassign">Manual Assign</a>
+                    </li>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="employeetransaction">Employee Transaction</a>
+                    </li>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="editproduction">Modify Employee Transaction</a>
+                    </li>
+                     <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="WorkAllocation/WorkAllocation">Employee Work Allocation</a>
+                    </li>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="searchandcode">Search and Code</a>
+                    </li>
+                   
+                </ul>
+            </li>
+            <li onclick="toggleAngleDown(this)"><a class="sidebar-sub-toggle"><i class="fa fa-upload"
+                        aria-hidden="true"></i>
+                    Upload <span class="sidebar-collapse-icon ti-angle-down"></span></a>
+                <ul>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="Upload/Upload">Upload</a>
+                    </li>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="productionupload"> Production Upload</a>
+                    </li>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="EmployeeCategoryMapping/EmployeeCategoryMapping">Employee Category Mapping</a>
+                    </li>
+                </ul>
+            </li>
+            @* <li onclick="toggleAngleDown(this)"><a class="sidebar-sub-toggle">
+                    <i class="fa fa-filter" aria-hidden="true"></i>
+                    Workable Filter <span class="sidebar-collapse-icon ti-angle-down"></span></a>
+                <ul>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="WorkableFilter">Workable Filter</a>
+                    </li>
+                </ul>
+            </li> *@
+            <li onclick="toggleAngleDown(this)"><a class="sidebar-sub-toggle">
+                    <i class="fa fa-tachometer" aria-hidden="true"></i>
+                    Inventory Dashboard <span class="sidebar-collapse-icon ti-angle-down"></span></a>
+                <ul>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="inventorydashboard">Inventory Dashboard</a>
+                    </li>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="productivitydashboard">Productivity Dashboard</a>
+                    </li>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="globaldashboard">Global Dashboard</a>
+                    </li>
+                </ul>
+            </li>
+            <li onclick="toggleAngleDown(this)"><a class="sidebar-sub-toggle">
+                    <i class="fa fa-file" aria-hidden="true"></i>
+                    Productivity Report<span class="sidebar-collapse-icon ti-angle-down"></span></a>
+                <ul>
+                    <li>
+                        <i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+                        <a href="productivityReport"> Productivity Report</a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
